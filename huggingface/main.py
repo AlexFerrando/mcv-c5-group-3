@@ -4,7 +4,7 @@ import os
 
 from consts import DetectionResults
 from PIL import Image, ImageDraw
-from read_data import read_data
+from read_data import read_data, load_videos
 from transformers import AutoImageProcessor, AutoModelForObjectDetection
 from typing import List, Dict, Tuple, Optional, Union
 
@@ -52,6 +52,10 @@ def run_inference(model: torch.nn.Module,
     with torch.no_grad():
         inputs = image_processor(images=images, return_tensors="pt")
         outputs = model(**inputs.to(device))
+
+        img_size = torch.tensor([images[0].size[1], images[0].size[0]], dtype=torch.float32)
+        target_sizes = img_size.repeat(len(images), 1)
+        target_sizes.to(device)
         
         results = []
         for _ , image in enumerate(images):
@@ -102,6 +106,7 @@ def visualize_detections(image: Image.Image,
     Returns:
         Image with detections visualized
     """
+
     # Create a copy to avoid modifying the original
     output_image = image.copy()
     draw = ImageDraw.Draw(output_image)
@@ -156,20 +161,22 @@ def main():
     # Load model
     model, image_processor, device = load_model()
     
-    # Load data
+    # Load dataset
     dataset = read_data(consts.KITTI_MOTS_PATH)
     image = dataset['test']['image'][0]
     
     # Run inference
-    results = run_inference(model, image_processor, image, device)[0]
+    results = run_inference(model, image_processor, dataset, device)
     
     # Print results
     print_detection_results(results, model.config)
     
     # Visualize and save
-    output_path = "output.jpg"
-    visualize_detections(image, results, model.config, output_path)
-    print(f"Output saved to {output_path}")
+    for i, image in enumerate(dataset[:10]):
+        
+        output_path = f"output_{i}.jpg"
+        visualize_detections(image, results[i], model.config, output_path)
+        print(f"Output saved to {output_path}")
 
 
 if __name__ == '__main__':
