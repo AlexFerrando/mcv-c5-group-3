@@ -4,7 +4,7 @@ import os
 
 from consts import DetectionResults
 from PIL import Image, ImageDraw
-from read_data import read_data, load_videos
+from read_data import read_data, load_video_frames
 from transformers import AutoImageProcessor, AutoModelForObjectDetection
 from typing import List, Dict, Tuple, Optional, Union
 
@@ -53,23 +53,27 @@ def run_inference(model: torch.nn.Module,
         inputs = image_processor(images=images, return_tensors="pt")
         outputs = model(**inputs.to(device))
 
-        img_size = torch.tensor([images[0].size[1], images[0].size[0]], dtype=torch.float32)
-        target_sizes = img_size.repeat(len(images), 1)
-        target_sizes.to(device)
+    # Crear el tensor de target_sizes
+    img_size = torch.tensor([images[0].size[1], images[0].size[0]], dtype=torch.float32)
+    target_sizes = img_size.repeat(len(images), 1).to(device)
+
+    # Aply detecction to the hole batch
+    batch_results = image_processor.post_process_object_detection(
+        outputs, 
+        threshold=threshold, 
+        target_sizes=target_sizes
+    )
+
+    # Post process results to get apropiate format
+    results = []
+    for i, image in enumerate(images):
+        result = batch_results[i]
         
-        results = []
-        for _ , image in enumerate(images):
-            target_sizes = torch.tensor([[image.size[1], image.size[0]]])
-            result = image_processor.post_process_object_detection(
-                outputs, 
-                threshold=threshold, 
-                target_sizes=target_sizes
-            )[0]
-            results.append(DetectionResults(
-                scores=result['scores'],
-                boxes=result['boxes'],
-                labels=result['labels']
-            ))
+        results.append(DetectionResults(
+            scores=result['scores'],
+            boxes=result['boxes'],
+            labels=result['labels']
+        ))
             
     return results
 
@@ -82,12 +86,13 @@ def print_detection_results(results: DetectionResults, model_config: torch.nn.Mo
         results: Detection results for a single image
         model_config: Model configuration containing label mapping
     """
-    for score, label, box in zip(results.scores, results.labels, results.boxes):
-        box = [round(i, 2) for i in box.tolist()]
-        print(
-            f"Detected {model_config.id2label[label.item()]} with confidence "
-            f"{round(score.item(), 3)} at location {box}"
-        )
+    for i, _ in enumerate(results):
+        for score, label, box in zip(results[i].scores, results[i].labels, results[i].boxes):
+            box = [round(i, 2) for i in box.tolist()]
+            print(
+                f"Detected {model_config.id2label[label.item()]} with confidence "
+                f"{round(score.item(), 3)} at location {box}"
+            )
 
 
 def visualize_detections(image: Image.Image, 
@@ -162,14 +167,14 @@ def main():
     model, image_processor, device = load_model()
     
     # Load dataset
-    dataset = read_data(consts.KITTI_MOTS_PATH)
-    image = dataset['test']['image'][0]
+    dataset = read_data(consts.KITTI_MOTS_PATH_RELATIVE)
+    dataset = dataset['test']['image'][0:10]
     
     # Run inference
     results = run_inference(model, image_processor, dataset, device)
     
     # Print results
-    print_detection_results(results, model.config)
+    print_detection_results(results[:10], model.config)
     
     # Visualize and save
     for i, image in enumerate(dataset[:10]):
