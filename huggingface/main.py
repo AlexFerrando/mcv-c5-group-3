@@ -1,6 +1,8 @@
 import consts
 import torch
 import os
+
+from consts import DetectionResults
 from PIL import Image, ImageDraw
 from read_data import read_data
 from transformers import AutoImageProcessor, AutoModelForObjectDetection
@@ -29,7 +31,7 @@ def run_inference(model: torch.nn.Module,
                  image_processor: AutoImageProcessor, 
                  images: Union[Image.Image, List[Image.Image]], 
                  device: torch.device,
-                 threshold: float = 0.9) -> List[Dict]:
+                 threshold: float = 0.9) -> List[DetectionResults]:
     """
     Run object detection inference on one or multiple images.
     
@@ -59,12 +61,16 @@ def run_inference(model: torch.nn.Module,
                 threshold=threshold, 
                 target_sizes=target_sizes
             )[0]
-            results.append(result)
+            results.append(DetectionResults(
+                scores=result['scores'],
+                boxes=result['boxes'],
+                labels=result['labels']
+            ))
             
     return results
 
 
-def print_detection_results(results: Dict, model_config: Dict) -> None:
+def print_detection_results(results: DetectionResults, model_config: torch.nn.Module) -> None:
     """
     Print detection results.
     
@@ -72,7 +78,7 @@ def print_detection_results(results: Dict, model_config: Dict) -> None:
         results: Detection results for a single image
         model_config: Model configuration containing label mapping
     """
-    for score, label, box in zip(results["scores"], results["labels"], results["boxes"]):
+    for score, label, box in zip(results.scores, results.labels, results.boxes):
         box = [round(i, 2) for i in box.tolist()]
         print(
             f"Detected {model_config.id2label[label.item()]} with confidence "
@@ -81,8 +87,8 @@ def print_detection_results(results: Dict, model_config: Dict) -> None:
 
 
 def visualize_detections(image: Image.Image, 
-                        results: Dict, 
-                        model_config: Dict,
+                        results: DetectionResults, 
+                        model_config: torch.nn.Module,
                         output_path: Optional[str] = None) -> Image.Image:
     """
     Visualize object detection results on an image.
@@ -100,7 +106,7 @@ def visualize_detections(image: Image.Image,
     output_image = image.copy()
     draw = ImageDraw.Draw(output_image)
     
-    for scores , label, box in zip(results["scores"], results["labels"], results["boxes"]):
+    for label, box in zip(results.labels, results.boxes):
         box = [round(i, 2) for i in box.tolist()]
         x, y, x2, y2 = tuple(box)
         draw.rectangle((x, y, x2, y2), outline="red", width=1)
@@ -151,7 +157,7 @@ def main():
     model, image_processor, device = load_model()
     
     # Load data
-    dataset = read_data(consts.KITTI_MOTS_PATH_RELATIVE)
+    dataset = read_data(consts.KITTI_MOTS_PATH)
     image = dataset['test']['image'][0]
     
     # Run inference
