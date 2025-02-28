@@ -2,7 +2,7 @@ import consts
 import torch
 import os
 from PIL import Image, ImageDraw
-from read_data import read_data
+from read_data import read_data, load_videos
 from transformers import AutoImageProcessor, AutoModelForObjectDetection
 from typing import List, Dict, Tuple, Optional, Union
 
@@ -50,16 +50,20 @@ def run_inference(model: torch.nn.Module,
     with torch.no_grad():
         inputs = image_processor(images=images, return_tensors="pt")
         outputs = model(**inputs.to(device))
+
+        img_size = torch.tensor([images[0].size[1], images[0].size[0]], dtype=torch.float32)
+        target_sizes = img_size.repeat(len(images), 1)
+        target_sizes.to(device)
         
-        results = []
-        for _ , image in enumerate(images):
-            target_sizes = torch.tensor([[image.size[1], image.size[0]]])
-            result = image_processor.post_process_object_detection(
-                outputs, 
-                threshold=threshold, 
-                target_sizes=target_sizes
-            )[0]
-            results.append(result)
+        # Aplicar post-procesamiento a todo el batch
+        batch_results = image_processor.post_process_object_detection(
+            outputs, 
+            threshold=threshold, 
+            target_sizes=target_sizes
+        )
+
+        # Convertir la salida a lista
+        results = [result for result in batch_results]
             
     return results
 
@@ -72,16 +76,18 @@ def print_detection_results(results: Dict, model_config: Dict) -> None:
         results: Detection results for a single image
         model_config: Model configuration containing label mapping
     """
-    for score, label, box in zip(results["scores"], results["labels"], results["boxes"]):
-        box = [round(i, 2) for i in box.tolist()]
-        print(
-            f"Detected {model_config.id2label[label.item()]} with confidence "
-            f"{round(score.item(), 3)} at location {box}"
-        )
+
+    for result in results:
+        for score, label, box in zip(result["scores"], result["labels"], result["boxes"]):
+            box = [round(i, 2) for i in box.tolist()]
+            print(
+                f"Detected {model_config.id2label[label.item()]} with confidence "
+                f"{round(score.item(), 3)} at location {box}"
+            )
 
 
-def visualize_detections(image: Image.Image, 
-                        results: Dict, 
+def visualize_detections(image: List[Image.Image], 
+                        result: Dict, 
                         model_config: Dict,
                         output_path: Optional[str] = None) -> Image.Image:
     """
@@ -96,11 +102,12 @@ def visualize_detections(image: Image.Image,
     Returns:
         Image with detections visualized
     """
+
     # Create a copy to avoid modifying the original
     output_image = image.copy()
     draw = ImageDraw.Draw(output_image)
-    
-    for scores , label, box in zip(results["scores"], results["labels"], results["boxes"]):
+
+    for scores , label, box in zip(result["scores"], result["labels"], result["boxes"]):
         box = [round(i, 2) for i in box.tolist()]
         x, y, x2, y2 = tuple(box)
         draw.rectangle((x, y, x2, y2), outline="red", width=1)
@@ -151,19 +158,20 @@ def main():
     model, image_processor, device = load_model()
     
     # Load data
-    dataset = read_data(consts.KITTI_MOTS_PATH_RELATIVE)
-    image = dataset['test']['image'][0]
+    dataset = load_videos(consts.KITTI_MOTS_PATH_RELATIVE + 'training/image_02')
     
     # Run inference
-    results = run_inference(model, image_processor, image, device)[0]
+    results = run_inference(model, image_processor, dataset, device)
     
     # Print results
     print_detection_results(results, model.config)
     
     # Visualize and save
-    output_path = "output.jpg"
-    visualize_detections(image, results, model.config, output_path)
-    print(f"Output saved to {output_path}")
+    for i, image in enumerate(dataset[:10]):
+        
+        output_path = f"output_{i}.jpg"
+        visualize_detections(image, results[i], model.config, output_path)
+        print(f"Output saved to {output_path}")
 
 
 if __name__ == '__main__':

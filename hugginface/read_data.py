@@ -11,6 +11,7 @@ def load_videos(folder: str) -> List[Image.Image]:
         frames.sort()
         for frame in frames:
             images.append(Image.open(frame))
+            
     return images
 
 
