@@ -1,0 +1,1 @@
+KITTI_MOTS_PATH = '/home/mcv/datasets/C5/KITTI-MOTS/'
