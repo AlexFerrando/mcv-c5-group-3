@@ -6,7 +6,7 @@ from transformers import AutoImageProcessor, AutoModelForObjectDetection
 
 def main():
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    dataset = read_data(consts.KITTI_MOTS_PATH_ALEX)
+    dataset = read_data(consts.KITTI_MOTS_PATH)
     image_processor = AutoImageProcessor.from_pretrained(consts.MODEL_NAME)
     model = AutoModelForObjectDetection.from_pretrained(consts.MODEL_NAME)
     model.to(device)
