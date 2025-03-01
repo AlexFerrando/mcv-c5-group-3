@@ -1,8 +1,8 @@
 from detectron2.data import DatasetCatalog
 
 import os
-import consts
 
+import consts
 from detector import *
 from read_data import register_kitti_mots
 
