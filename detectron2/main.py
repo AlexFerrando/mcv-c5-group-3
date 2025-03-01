@@ -9,7 +9,7 @@ from read_data import register_kitti_mots
 def main():
 
     # Load data
-    dataset_path = consts.KITTI_MOTS_PATH_RELATIVE
+    dataset_path = consts.KITTI_MOTS_PATH
     register_kitti_mots(dataset_path)
 
     dataset_name = "kitti_mots_testing"

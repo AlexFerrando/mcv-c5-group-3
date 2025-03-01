@@ -15,47 +15,65 @@ def load_kitti_mots_dataset(dataset_path, split="training"):
     Returns:
         list: A list of dictionaries, each representing an image and its annotations.
     """
-    images_dir = os.path.join(dataset_path, split, "image_02", "0000")
-    annotations_file = os.path.join(dataset_path, "instances_txt", "0000.txt")
+    # Define the paths for images and annotation files
+    images_dir = os.path.join(dataset_path, split, "image_02")
+    annotations_dir = os.path.join(dataset_path, "instances_txt")
 
     dataset_dicts = []
 
-    # Read annotations
-    with open(annotations_file, "r") as f:
-        annotations = f.readlines()
-
-    # Process each image
-    for frame_id, img_file in enumerate(sorted(os.listdir(images_dir))):
-        if not img_file.endswith(".png"):
+    # Loop over all folders (e.g., '0000', '0001', ...) in the images_dir
+    for folder in sorted(os.listdir(images_dir)):
+        folder_path = os.path.join(images_dir, folder)
+        if not os.path.isdir(folder_path):
             continue
-
-        image_path = os.path.join(images_dir, img_file)
-        height, width = Image.open(image_path).size[::-1]
-
-        record = {
-            "file_name": image_path,
-            "image_id": frame_id,
-            "height": height,
-            "width": width,
-            "annotations": [],
-        }
-
-        # Read annotations for this frame
-        for line in annotations:
-            fields = list(map(int, line.split()))
-            frame, _, category_id, _, _, x1, y1, x2, y2, _ = fields[:10]
-
-            if frame != frame_id:
+        
+        # Process each image in the folder
+        for frame_id, img_file in enumerate(sorted(os.listdir(folder_path))):
+            if not img_file.endswith(".png"):
                 continue
 
-            obj = {
-                "bbox": [x1, y1, x2 - x1, y2 - y1],
-                "bbox_mode": BoxMode.XYWH_ABS,
-                "category_id": category_id - 1,  # KITTI MOTS classes start from 1
-            }
-            record["annotations"].append(obj)
+            image_path = os.path.join(folder_path, img_file)
+            height, width = Image.open(image_path).size[::-1]
 
-        dataset_dicts.append(record)
+            record = {
+                "file_name": image_path,
+                "image_id": len(dataset_dicts),
+                "height": height,
+                "width": width,
+                "annotations": [],
+            }
+
+            # Look for the correct annotation file
+            annotation_file = os.path.join(annotations_dir, f"{folder}.txt")
+
+            if not os.path.exists(annotation_file):
+                continue
+
+            # Read annotations for this frame
+            with open(annotation_file, "r") as f:
+                annotations = f.readlines()
+
+            # Process each annotation for this frame
+            for line in annotations:
+                try:
+                    fields = list(map(int, line.split()))
+                except ValueError:
+                    continue  # Skip malformed lines
+
+                # Frame format: frame_id, _, category_id, _, _, x1, y1, x2, y2, ...
+                frame, _, category_id, _, _, x1, y1, x2, y2, *_ = fields[:10]
+
+                if frame != frame_id:
+                    continue
+
+                obj = {
+                    "bbox": [x1, y1, x2 - x1, y2 - y1],
+                    "bbox_mode": BoxMode.XYWH_ABS,
+                    "category_id": category_id - 1,  # KITTI MOTS classes start from 1
+                }
+                record["annotations"].append(obj)
+
+            dataset_dicts.append(record)
 
     return dataset_dicts
 
