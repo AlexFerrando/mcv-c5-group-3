@@ -1,21 +1,41 @@
+from detectron2.data import DatasetCatalog
+
+import os
+import consts
+
 from detector import *
-from read_data import read_data
+from read_data import register_kitti_mots
 
 def main():
+
+    # Load data
+    dataset_path = consts.KITTI_MOTS_PATH_RELATIVE
+    register_kitti_mots(dataset_path)
+
+    dataset_name = "kitti_mots_testing"
+    dataset_dicts = DatasetCatalog.get(dataset_name)
+
     # Load model
     detector = Detector()
 
-    # Load data
-    dataset = read_data(consts.KITTI_MOTS_PATH_RELATIVE)
-    image = dataset['test']['image'][0]
+    # Output directory
+    output_dir = "detectron2_kitti_mots"
+    os.makedirs(output_dir, exist_ok=True)
 
-    # Run inference
-    results = detector.run_inference(image)
+    for idx, sample in enumerate(dataset_dicts):
 
-    # Visualize and save
-    output_path = "output.jpg"
-    detector.visualize_detections(image, results, output_path)
-    print(f"Output saved to {output_path}")
+        image_path = sample["file_name"]
+        image = cv2.imread(image_path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        # Run inference
+        results = detector.run_inference(Image.fromarray(image))
+
+        # Generate output filename
+        output_path = os.path.join(output_dir, f"detection_{idx}.png")
+
+        # Visualize and save detections
+        detector.visualize_detections(Image.fromarray(image), results, output_path)
 
 if __name__ == '__main__':
     main()

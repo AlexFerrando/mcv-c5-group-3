@@ -15,15 +15,18 @@ class Detector:
     def __init__(self):
         self.cfg = get_cfg()
 
-        # Load model
+        # Load model configuration and weights
         self.cfg.merge_from_file(model_zoo.get_config_file(consts.MODEL_NAME))
         self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(consts.MODEL_NAME)
 
+        # Model settings
         self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
         self.cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
         self.predictor = DefaultPredictor(self.cfg)
+
         self.metadata = MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0])
+        # self.metadata = MetadataCatalog.get("coco_2017_val") # COCO metadata
 
     def run_inference(self, image: Image.Image) -> Dict:
         """
@@ -47,5 +50,6 @@ class Detector:
         
         if output_path:
             output_image.save(output_path)
-        
+            print(f"Saved detection result to {output_path}")
+
         return output_image
