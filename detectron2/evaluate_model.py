@@ -31,9 +31,10 @@ def evaluate_model(dataset_name):
     
     # Perform inference and evaluate using COCO metrics
     dataset_dicts = DatasetCatalog.get(dataset_name)
-    inference_on_dataset(predictor.model, dataset_dicts, evaluator)
+    results = inference_on_dataset(predictor.model, dataset_dicts, evaluator)
     
-    print(f"Evaluation completed. Results saved in 'output/' directory.")
+    # Save results to a JSON file
+    save_evaluation_results(results)
 
 
 def save_evaluation_results(results):
