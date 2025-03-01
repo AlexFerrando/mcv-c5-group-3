@@ -1,69 +1,77 @@
-from detectron2.engine import DefaultPredictor
-from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
-from detectron2.config import get_cfg
-from detectron2 import model_zoo
+from detectron2.data import build_detection_test_loader
 
-import torch
 import json
+import os
 
+from detector import Detector
 import consts
 from read_data import register_kitti_mots 
 
-def evaluate_model(dataset_name):
+def evaluate_model(dataset_name, detector):
     """
     Evaluate the model using COCO metrics (AP, IoU) on the KITTI MOTS dataset.
+    
     Args:
-        dataset_path (str): Path to the KITTI MOTS dataset.
-    """    
-    # Load configuration from Detectron2
-    cfg = get_cfg()
-    cfg.merge_from_file(model_zoo.get_config_file(consts.MODEL_NAME))
-    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(consts.MODEL_NAME)
-    cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # Set a threshold for detection
+        dataset_name (str): Dataset name for testing (e.g., "kitti_mots_testing").
+        detector (Detector): The initialized Detector instance.
+    """  
+    print("Starting model evaluation...")
+
+    # Create COCO evaluator
+    evaluator = COCOEvaluator(dataset_name, output_dir="output/")
     
-    # Load model for evaluation
-    predictor = DefaultPredictor(cfg)
+    # Build detection test dataloader
+    val_loader = build_detection_test_loader(detector.cfg, dataset_name)
     
-    # Create COCO evaluator for the testing dataset
-    evaluator = COCOEvaluator(dataset_name, cfg, False, output_dir="output/")
-    
-    # Perform inference and evaluate using COCO metrics
-    dataset_dicts = DatasetCatalog.get(dataset_name)
-    results = inference_on_dataset(predictor.model, dataset_dicts, evaluator)
-    
-    # Save results to a JSON file
+    # Perform evaluation
+    results = inference_on_dataset(detector.predictor.model, val_loader, evaluator)
+    print("Full evaluation results:", results)
+
+    # Save results
     save_evaluation_results(results)
+    print("Evaluation completed. Results saved in './output/evaluation_results.json'")
 
 
 def save_evaluation_results(results):
     """
     Save the evaluation results to a JSON file.
+    
     Args:
         results (dict): The evaluation results dictionary.
-    """
-    # Define the output path
-    output_path = "output/evaluation_results.json"
+    """    
+        # Ensure 'bbox' key exists to avoid crashes
+    if "bbox" not in results:
+        print("'bbox' key not found in results.")
+        results["bbox"] = {}
     
-    # Average Precision (AP) & Average Recall (AR)
+    # Extract metrics
     evaluation_metrics = {
-        "AP@0.50": results["bbox"]["AP"],       # Standard AP metric
-        "AP@0.75": results["bbox"]["AP75"],     # High IoU threshold
-        "AR@0.50": results["bbox"]["AR"],       # How many GT objects are TP
-        "AR@0.75": results["bbox"]["AR75"]  	# High IoU threshold
+        "AP@IoU=0.50": results["bbox"].get("AP50", "N/A"),
+        "AP@IoU=0.75": results["bbox"].get("AP75", "N/A"),
+        "AR@IoU=0.50": results["bbox"].get("AR50", "N/A"),
+        "AR@IoU=0.75": results["bbox"].get("AR75", "N/A"),
     }
     
-    # Save the metrics to a JSON file
+    # Save to a JSON file
+    output_path = "./output/evaluation_results.json"
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
     with open(output_path, 'w') as f:
         json.dump(evaluation_metrics, f, indent=4)
+    
     print(f"Evaluation results saved to {output_path}")
 
 
 if __name__ == '__main__':
 
+    # Register dataset
     dataset_path = consts.KITTI_MOTS_PATH
     register_kitti_mots(dataset_path)
     dataset_name = "kitti_mots_testing"
 
-    evaluate_model(dataset_name)
+    # Initialize Detector (ensuring model is loaded only once)
+    detector = Detector()
+
+    # Evaluate the model
+    evaluate_model(dataset_name, detector)
