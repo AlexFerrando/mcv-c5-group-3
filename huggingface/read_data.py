@@ -18,19 +18,10 @@ def load_video_frames(folder: str) -> List[str]:
         all_frames.extend(frames)
     return all_frames
 
-def load_images_and_annotations(image_folder: str, annotation_folder: str) -> Dict:
-    """Load image paths and corresponding annotation masks."""
-    images, masks, track_ids, class_ids, frame_ids = [], [], [], [], []
 
-    sequences = sorted(os.listdir(image_folder))
-    for seq in sequences:
-        seq_img_folder = os.path.join(image_folder, seq)
-        seq_anno_file = os.path.join(annotation_folder, f"{seq}.txt")
+def load_images_and_annotations_for_video(video_folder: str, annotation_file: str) -> Dict:
 
-        if not os.path.exists(seq_anno_file):
-            continue  # Skip sequences with no annotations
-
-        with open(seq_anno_file, "r") as f:
+        with open(annotation_file, "r") as f:
             annotations = f.readlines()
 
         frame_to_mask = {}
@@ -39,7 +30,7 @@ def load_images_and_annotations(image_folder: str, annotation_folder: str) -> Di
             frame_id, track_id, class_id, h, w = map(int, parts[:5])
             rle_mask = " ".join(parts[5:])
 
-            img_path = os.path.join(seq_img_folder, f"{frame_id:06d}.png")
+            img_path = os.path.join(video_folder, f"{frame_id:06d}.png")
             if not os.path.exists(img_path):
                 continue  # Skip missing images
 
@@ -60,6 +51,24 @@ def load_images_and_annotations(image_folder: str, annotation_folder: str) -> Di
             frame_to_mask[frame_id]["track_id"].append(track_id)
             frame_to_mask[frame_id]["class_id"].append(class_id)
             frame_to_mask[frame_id]["mask"] = np.maximum(frame_to_mask[frame_id]["mask"], mask).tolist()
+        
+        return frame_to_mask
+
+
+def load_images_and_annotations(image_folder: str, annotation_folder: str) -> Dict:
+    """Load image paths and corresponding annotation masks."""
+    images, masks, track_ids, class_ids, frame_ids = [], [], [], [], []
+
+    sequences = sorted(os.listdir(image_folder))
+    for seq in sequences:
+        seq_img_folder = os.path.join(image_folder, seq)
+        seq_anno_file = os.path.join(annotation_folder, f"{seq}.txt")
+
+        if not os.path.exists(seq_anno_file):
+            continue  # Skip sequences with no annotations
+
+        # Load annotations
+        frame_to_mask = load_images_and_annotations_for_video(seq_img_folder, seq_anno_file)
 
         # Collect dataset entries
         for frame_data in frame_to_mask.values():
