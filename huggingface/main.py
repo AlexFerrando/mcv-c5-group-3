@@ -1,12 +1,16 @@
 import consts
 import torch
 import os
+import json
+import os
 
 from consts import DetectionResults
 from PIL import Image, ImageDraw
-from read_data import read_data, load_video_frames
+from read_data import read_data, load_video_frames, load_images_and_annotations_for_video
 from transformers import AutoImageProcessor, AutoModelForObjectDetection
 from typing import List, Dict, Tuple, Optional, Union
+from read_data import read_annotations
+from transformers import DetrForObjectDetection
 
 
 def load_model(model_name: str = consts.MODEL_NAME) -> Tuple[torch.nn.Module, AutoImageProcessor, torch.device]:
@@ -162,26 +166,95 @@ def process_batch(model: torch.nn.Module,
     return results
 
 
+def kitti_to_coco(kitti_file, output_json):
+    images = []
+    annotations = []
+    categories = [
+        {"id": 1, "name": "pedestrian", "supercategory": "person"},
+        {"id": 2, "name": "car", "supercategory": "vehicle"}
+    ]
+    
+    with open(kitti_file, "r") as f:
+        lines = f.readlines()
+    
+    image_ids = {}
+    ann_id = 1
+    
+    for line in lines:
+        parts = line.strip().split(" ")
+        
+        frame_id = int(parts[0])
+        track_id = int(parts[1])
+        obj_class = int(parts[2])
+        img_width = int(parts[3])
+        img_height = int(parts[4])
+        encoded_mask = parts[5]
+
+        # Si la imagen aún no se ha agregado
+        if frame_id not in image_ids:
+            image_ids[frame_id] = len(image_ids) + 1
+            images.append({
+                "id": image_ids[frame_id],
+                "file_name": f"{frame_id:06d}.png",
+                "width": img_width,
+                "height": img_height
+            })
+
+        annotations.append({
+            "id": ann_id,
+            "image_id": image_ids[frame_id],
+            "category_id": obj_class,
+            "segmentation": {
+                "counts": encoded_mask,
+                "size": [img_height, img_width]
+            },
+            "area": 0,  # Se puede calcular si se decodifica la máscara
+            "bbox": [0, 0, 0, 0],  # Se puede calcular si se decodifica la máscara
+            "iscrowd": 1
+        })
+        
+        ann_id += 1
+
+    coco_format = {
+        "images": images,
+        "annotations": annotations,
+        "categories": categories
+    }
+
+    with open(output_json, "w") as f:
+        json.dump(coco_format, f, indent=4)
+
+
+
 def main():
+
+    video0000_folder = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS/training/image_02/0000'
+    annotations_folder = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS/instances_txt/0000.txt'
+
+
+    kitti_to_coco(annotations_folder, "coco_annotations.json")
+
+    gt = read_annotations("coco_annotations.json")
+
     # Load model
     model, image_processor, device = load_model()
     
     # Load dataset
     dataset = read_data(consts.KITTI_MOTS_PATH_RELATIVE)
-    dataset = dataset['test']['image'][0:10]
+    dataset = dataset['train']['image'][0:10]
     
     # Run inference
     results = run_inference(model, image_processor, dataset, device)
     
     # Print results
-    print_detection_results(results[:10], model.config)
+    print_detection_results(results, model.config)
     
-    # Visualize and save
-    for i, image in enumerate(dataset[:10]):
+    # # Visualize and save
+    # for i, image in enumerate(dataset):
         
-        output_path = f"output_{i}.jpg"
-        visualize_detections(image, results[i], model.config, output_path)
-        print(f"Output saved to {output_path}")
+    #     output_path = f"output_{i}.jpg"
+    #     visualize_detections(image, results[i], model.config, output_path)
+    #     print(f"Output saved to {output_path}")
 
 
 if __name__ == '__main__':
