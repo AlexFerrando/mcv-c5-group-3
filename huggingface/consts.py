@@ -12,6 +12,28 @@ MODEL_NAME = "facebook/detr-resnet-50"
 MAX_WIDTH_SIZE = 1242
 MAX_HEIGHT_SIZE = 376
 
+# Classes mapping
+def inverse_mapping_class_id(dataset: str=None, class_id: int=None):
+    """Maps a class id from one dataset to the other.
+
+    If dataset = 'coco' and class_id = 2 (class name = 'car') --> returns the id of the class 'car' in KITTI dataset.
+    If dataset = 'kitti' and class_id = 1 (class name = 'car') --> returns the id of the class 'car' in COCO dataset.
+    """
+    
+    if dataset == 'coco':
+        if class_id == 3:  # 'car'
+            return 1
+        
+        elif class_id == 1: # 'person'
+            return 2
+    
+    elif dataset == 'kitti':
+        if class_id == 1:  # 'car'
+            return 3
+        
+        elif class_id == 2:  # 'person'
+            return 1
+
 @dataclass
 class DetectionResults:
     scores: Tensor
