@@ -31,7 +31,7 @@ def run_inference(model: torch.nn.Module,
                  images: Union[Image.Image, List[Image.Image]], 
                  device: torch.device,
                  threshold: float = 0.9,
-                 output_format: str = 'coco') -> List[DetectionResults]:
+                 output_format: str = 'other') -> List[DetectionResults]:
     """
     Run object detection inference on one or multiple images.
     
@@ -65,7 +65,7 @@ def run_inference(model: torch.nn.Module,
     )
 
     # Filter the detection to get only the desired ones: 'car' (id=1) and 'pedestrian' (id=2)
-    filtered_detections = filter_detections_by_id(batch_results, id = [1,2])
+    filtered_detections = filter_and_correct_detections(batch_results, model.config.id2label, model.config.label2id)
 
     # Post process results to get apropiate format
     if output_format == 'coco':
@@ -85,18 +85,7 @@ def run_inference(model: torch.nn.Module,
     return results
 
 
-def filter_detections_by_id(results: List[Dict], id: List[int]=[1, 2]) -> List[Dict]:
-    """
-    Filter detection results to only keep detections with labels matching the specified IDs.
-    
-    Args:
-        results: List of dictionaries, each with 'scores', 'labels', and 'boxes' keys
-        id: List of label IDs to keep (defaults to [1, 2] which typically are 'person' and 'car')
-    
-    Returns:
-        List of dictionaries with filtered detections
-    """
-
+def filter_and_correct_detections(results: List[Dict], id2label: Dict, label2id: Dict) -> List[Dict]:
     filtered_results = []
     
     for result in results:
@@ -110,7 +99,10 @@ def filter_detections_by_id(results: List[Dict], id: List[int]=[1, 2]) -> List[D
         # Only keep detections with matching labels
         for score, label, box in zip(result['scores'], result['labels'], result['boxes']):
             # Check if this label is in our list of IDs to keep
-            if label.item() in id:
+            if label.item() == label2id['car']:
+                # Correct the label ID if needed
+                if label.item() == label2id['car']:
+                    label = torch.tensor(label2id['car'], device=label.device)
                 filtered_result['scores'].append(score)
                 filtered_result['labels'].append(label)
                 filtered_result['boxes'].append(box)
@@ -242,7 +234,7 @@ if __name__ == '__main__':
     model, image_processor, device = load_model()
     
     # Load dataset
-    dataset = read_data(consts.KITTI_MOTS_PATH_RELATIVE)
+    dataset = read_data(consts.KITTI_MOTS_PATH_ALEX)
     dataset = dataset['train']['image'][0:10]
     
     # Run inference

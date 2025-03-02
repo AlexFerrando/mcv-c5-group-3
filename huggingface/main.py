@@ -1,7 +1,13 @@
 import os
+import torch
 from typing import Dict
 from pycocotools.mask import toBbox
 import json
+from coco_eval import CocoEvaluator
+from inference import load_model, run_inference
+from read_data import read_data
+import consts
+from pycocotools.coco import COCO
 
 
 def load_images_and_annotations_for_video(video_folder: str, annotation_file: str) -> Dict:
@@ -49,6 +55,8 @@ def load_images_and_annotations_for_video(video_folder: str, annotation_file: st
         annotation = {
             'id': annotation_id_counter,
             'image_id': frame_to_mask[frame_id]["image_id"],
+            'iscrowd': 0,
+            'area': bbox[2] * bbox[3],
             'category_id': class_id,
             'bbox': bbox,
             'track_id': track_id,
@@ -60,8 +68,8 @@ def load_images_and_annotations_for_video(video_folder: str, annotation_file: st
         if class_id not in categories:
             if class_id == 1:
                 category_name = 'car'
-            elif class_id == 2:
-                category_name = 'pedestrian'
+            # elif class_id == 2:
+            #     category_name = 'pedestrian'
             else:
                 category_name = 'unknown'
             
@@ -92,15 +100,46 @@ def load_images_and_annotations_for_video(video_folder: str, annotation_file: st
 
 
 if __name__ == '__main__':
-    video0000_folder = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS/training/image_02/0000'
-    annotations_folder = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS/instances_txt/0000.txt'
+    # video0000_folder = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS/training/image_02/0000'
+    # annotations_file = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS/instances_txt/0000.txt'
+    video0000_folder = f'{consts.KITTI_MOTS_PATH_ALEX}training/image_02/0000'
+    annotations_file = f'{consts.KITTI_MOTS_PATH_ALEX}instances_txt/0000.txt'
+    output_json_path = './gt_coco_0000.json'
 
-    gt_coco = load_images_and_annotations_for_video(video0000_folder, annotations_folder)
+    gt_coco = load_images_and_annotations_for_video(video0000_folder, annotations_file)
     
     # Save the gt_coco as a JSON file
-    output_json_path = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS/gt_coco_0000.json'
+    #output_json_path = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS/gt_coco_0000.json'
     with open(output_json_path, 'w') as f:
         json.dump(gt_coco, f, indent=4)
     print(f"Ground truth COCO annotations saved to: {output_json_path}")
 
-    print(gt_coco)
+    gt_coco = COCO(output_json_path)
+
+    coco_evaluator = CocoEvaluator(gt_coco)
+
+    # Load dataset
+    dataset = read_data(consts.KITTI_MOTS_PATH_ALEX)
+    dataset = dataset['train']['image']
+
+    model, image_processor, device = load_model()
+    results = []
+    for i in range(0, len(dataset), 10):
+        batch = dataset[i:min(i + 10, len(dataset))]
+        results += run_inference(model, image_processor, batch, device)
+
+    formatted_results = {}
+    for i, (image, result) in enumerate(zip(dataset, results)):
+        formatted_results[i + 1] = {
+            'image': image,
+            'labels': result.labels,
+            'boxes': result.boxes,
+            'scores': result.scores
+        }
+
+    coco_evaluator.update(formatted_results)
+    coco_evaluator.synchronize_between_processes()
+    coco_evaluator.accumulate()
+    coco_evaluator.summarize()
+
+    
