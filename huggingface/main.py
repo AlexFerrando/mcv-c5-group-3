@@ -132,9 +132,9 @@ if __name__ == '__main__':
     for i, (image, result) in enumerate(zip(dataset, results)):
         formatted_results[i + 1] = {
             'image': image,
-            'labels': result.labels,
-            'boxes': result.boxes,
-            'scores': result.scores
+            'labels': result["labels"],
+            'boxes': result["boxes"],
+            'scores': result["scores"],
         }
 
     coco_evaluator.update(formatted_results)

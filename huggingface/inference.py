@@ -66,23 +66,7 @@ def run_inference(model: torch.nn.Module,
 
     # Filter the detection to get only the desired ones: 'car' (id=1) and 'pedestrian' (id=2)
     filtered_detections = filter_and_correct_detections(batch_results, model.config.id2label, model.config.label2id)
-
-    # Post process results to get apropiate format
-    if output_format == 'coco':
-        results = coco_reformat(results=filtered_detections, img_size=target_sizes)
-    
-    else:
-        results = []
-        for i, image in enumerate(images):
-            result = filtered_detections[i]
-            
-            results.append(DetectionResults(
-                scores=result['scores'],
-                boxes=result['boxes'],
-                labels=result['labels']
-            ))
-            
-    return results
+    return filtered_detections
 
 
 def filter_and_correct_detections(results: List[Dict], id2label: Dict, label2id: Dict) -> List[Dict]:
@@ -107,11 +91,11 @@ def filter_and_correct_detections(results: List[Dict], id2label: Dict, label2id:
                 filtered_result['labels'].append(label)
                 filtered_result['boxes'].append(box)
         
-        # Convert lists back to tensors if needed
-        if filtered_result['scores']:
-            filtered_result['scores'] = torch.stack(filtered_result['scores'])
-            filtered_result['labels'] = torch.stack(filtered_result['labels'])
-            filtered_result['boxes'] = torch.stack(filtered_result['boxes'])
+        if len(filtered_result['scores']) == 0:
+            continue
+        filtered_result['scores'] = torch.stack(filtered_result['scores'])
+        filtered_result['labels'] = torch.stack(filtered_result['labels'])
+        filtered_result['boxes'] = torch.stack(filtered_result['boxes'])
         
         filtered_results.append(filtered_result)
     
