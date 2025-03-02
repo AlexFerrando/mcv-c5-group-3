@@ -27,6 +27,7 @@ class Detector:
 
         self.metadata = MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0])
         # self.metadata = MetadataCatalog.get("coco_2017_val") # COCO metadata
+        # self.metadata = MetadataCatalog.get("kitti_mots_testing") # COCO metadata
 
     def run_inference(self, image: Image.Image) -> Dict:
         """

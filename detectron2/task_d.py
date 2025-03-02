@@ -3,6 +3,7 @@ from detectron2.data import build_detection_test_loader
 
 import json
 import os
+from tqdm import tqdm
 
 from detector import Detector
 import consts
@@ -25,7 +26,8 @@ def evaluate_model(dataset_name, detector):
     val_loader = build_detection_test_loader(detector.cfg, dataset_name)
     
     # Perform evaluation
-    results = inference_on_dataset(detector.predictor.model, val_loader, evaluator)
+    results = inference_on_dataset(detector.predictor.model, 
+                                   tqdm(val_loader, desc="Evaluting..."), evaluator)
     print("Full evaluation results:", results)
 
     # Save results
@@ -39,18 +41,23 @@ def save_evaluation_results(results):
     
     Args:
         results (dict): The evaluation results dictionary.
-    """    
-        # Ensure 'bbox' key exists to avoid crashes
+    """
     if "bbox" not in results:
-        print("'bbox' key not found in results.")
-        results["bbox"] = {}
-    
+        print("Warning: 'bbox' key not found in results! No bounding box evaluations were computed.")
+        print("Available keys in results:", results.keys())
+        results["bbox"] = {
+            "AP50": 0.0,
+            "AP75": 0.0,
+            "AR50": 0.0,
+            "AR75": 0.0,
+        }
+
     # Extract metrics
     evaluation_metrics = {
-        "AP@IoU=0.50": results["bbox"].get("AP50", "N/A"),
-        "AP@IoU=0.75": results["bbox"].get("AP75", "N/A"),
-        "AR@IoU=0.50": results["bbox"].get("AR50", "N/A"),
-        "AR@IoU=0.75": results["bbox"].get("AR75", "N/A"),
+        "AP@IoU=0.50": results["bbox"].get("AP50", 0.0),
+        "AP@IoU=0.75": results["bbox"].get("AP75", 0.0),
+        "AR@IoU=0.50": results["bbox"].get("AR50", 0.0),
+        "AR@IoU=0.75": results["bbox"].get("AR75", 0.0),
     }
     
     # Save to a JSON file

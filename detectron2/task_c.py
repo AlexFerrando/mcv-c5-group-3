@@ -22,7 +22,7 @@ def main():
     output_dir = "detectron2_kitti_mots"
     os.makedirs(output_dir, exist_ok=True)
 
-    for idx, sample in enumerate(dataset_dicts):
+    for idx, sample in enumerate(dataset_dicts[:10]):
 
         image_path = sample["file_name"]
         image = cv2.imread(image_path)
