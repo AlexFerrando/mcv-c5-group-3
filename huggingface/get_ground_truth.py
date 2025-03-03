@@ -31,8 +31,8 @@ def load_images_and_annotations_for_video(video_folder: str, annotation_file: st
         rle_mask = " ".join(parts[5:])
 
         # Skip annotations for classes we're not interested in
-        if class_id not in target_classes:
-            continue
+        # if class_id not in target_classes:
+        #     continue
             
         img_path = os.path.join(video_folder, f"{frame_id:06d}.png")
         if not os.path.exists(img_path):
