@@ -36,8 +36,12 @@ def create_video(gt_file, pred_file, output_video):
     out.release()
 
 # Uso de la función
-gt_file = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/gt_coco_0000.json'
-pred_file = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/predictions_10.json'
-output_video = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/output_video.mp4'
+# gt_file = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/gt_coco_0000.json'
+# pred_file = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/predictions_10.json'
+# output_video = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/output_video.mp4'
+
+gt_file = '/home/alex/Documents/MCV/C5/mcv-c5-group-3/gt_coco_0000.json'
+pred_file = '/home/alex/Documents/MCV/C5/mcv-c5-group-3/coco_results.json'
+output_video = '/home/alex/Documents/MCV/C5/mcv-c5-group-3/output_video.mp4'
 
 create_video(gt_file, pred_file, output_video)

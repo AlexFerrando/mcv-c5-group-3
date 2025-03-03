@@ -56,4 +56,11 @@ if __name__ == '__main__':
     coco_evaluator.accumulate()
     coco_evaluator.summarize()
 
+    coco_results = coco_evaluator.prepare_for_coco_detection(formatted_results)
+    
+    import json
+    with open('coco_results.json', 'w') as f:
+        json.dump(coco_results, f, indent=4)
+    print("COCO results saved to coco_results.json")
+
     
