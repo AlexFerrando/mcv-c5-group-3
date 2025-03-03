@@ -6,7 +6,7 @@ import json
 coco_gt = COCO("gt_coco_0000.json")
 
 # Cargar las predicciones
-coco_dt = coco_gt.loadRes("predictions_50.json")
+coco_dt = coco_gt.loadRes("predictions_all.json")
 
 # Crear el evaluador COCO
 coco_eval = COCOeval(coco_gt, coco_dt, iouType="bbox")

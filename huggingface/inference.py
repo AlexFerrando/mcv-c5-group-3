@@ -65,11 +65,11 @@ def run_inference(model: torch.nn.Module,
     )
 
     # Filter the detection to get only the desired ones: 'car' (id=1) and 'pedestrian' (id=2)
-    filtered_detections = filter_and_correct_detections(batch_results, model.config.id2label, model.config.label2id)
+    filtered_detections = filter_and_correct_detections(batch_results, model.config.id2label)
     return filtered_detections
 
 
-def filter_and_correct_detections(results: List[Dict], id2label: Dict, label2id: Dict) -> List[Dict]:
+def filter_and_correct_detections(results: List[Dict], id2label: Dict) -> List[Dict]:
     filtered_results = []
     
     for result in results:
@@ -79,86 +79,22 @@ def filter_and_correct_detections(results: List[Dict], id2label: Dict, label2id:
             'labels': [],
             'boxes': []
         }
-        
         # Only keep detections with matching labels
         for score, label, box in zip(result['scores'], result['labels'], result['boxes']):
             # Check if this label is in our list of IDs to keep
-            if label.item() == label2id['car']:
-                # Correct the label ID if needed
-                if label.item() == label2id['car']:
-                    label = torch.tensor(label2id['car'], device=label.device)
+            if id2label[label.item()] in ['car', 'person']:
                 filtered_result['scores'].append(score)
                 filtered_result['labels'].append(label)
                 filtered_result['boxes'].append(box)
         
-        if len(filtered_result['scores']) == 0:
-            continue
-        filtered_result['scores'] = torch.stack(filtered_result['scores'])
-        filtered_result['labels'] = torch.stack(filtered_result['labels'])
-        filtered_result['boxes'] = torch.stack(filtered_result['boxes'])
-        
-        filtered_results.append(filtered_result)
+        if len(filtered_result['scores']) != 0:
+            filtered_result['scores'] = torch.stack(filtered_result['scores'])
+            filtered_result['labels'] = torch.stack(filtered_result['labels'])
+            filtered_result['boxes'] = torch.stack(filtered_result['boxes'])
+            
+            filtered_results.append(filtered_result)
     
     return filtered_results
-
-
-def coco_reformat(results: List[Dict], img_size: Tuple[int, int]) -> Dict:
-    """
-    Converts a list of detection dictionaries to a single COCO format dictionary.
-    
-    Args:
-        results: List of dictionaries with 'scores', 'labels', and 'boxes' keys
-    
-    Returns:
-        Dictionary in COCO format with categories, images, and annotations
-    """
-    # Create the basic COCO format structure
-    coco_dict = {
-        'categories': [
-            {'id': 1, 'name': 'car', 'supercategory': 'vehicle'},
-            {'id': 2, 'name': 'pedestrian', 'supercategory': 'person'}
-        ],
-        'images': [],
-        'annotations': []
-    }
-    
-    annotation_id = 1  # Running annotation ID counter
-    
-    # Process each image's detection results
-    for image_id, result in enumerate(results, 1):
-        # Add image entry
-        coco_dict['images'].append({
-            'id': image_id,
-            'file_name': f'image_{image_id}.jpg',  # Placeholder filename
-            'width': int(img_size[0][0]),
-            'height': int(img_size[0][1]),
-        })
-        
-        # Process the detections for this image
-        if 'scores' in result and len(result['scores']) > 0:
-            for score, label, box in zip(result['scores'], result['labels'], result['boxes']):
-                # Convert box format from [x1, y1, x2, y2] to [x, y, width, height]
-                box_data = box.tolist()
-                x1, y1, x2, y2 = box_data
-                width = x2 - x1
-                height = y2 - y1
-                
-                # Create annotation entry
-                annotation = {
-                    'id': annotation_id,
-                    'image_id': image_id,
-                    'category_id': int(label.item()),
-                    'bbox': [x1, y1, width, height],
-                    'area': width * height,
-                    'segmentation': [],
-                    'iscrowd': 0,
-                    'score': float(score.item())
-                }
-                
-                coco_dict['annotations'].append(annotation)
-                annotation_id += 1
-    
-    return coco_dict
 
 
 def print_detection_results(results: DetectionResults, model_config: torch.nn.Module) -> None:
@@ -179,7 +115,7 @@ def print_detection_results(results: DetectionResults, model_config: torch.nn.Mo
 
 
 def visualize_detections(image: Image.Image, 
-                        results: DetectionResults, 
+                        results: Dict, 
                         model_config: torch.nn.Module,
                         output_path: Optional[str] = None) -> Image.Image:
     """
@@ -199,7 +135,7 @@ def visualize_detections(image: Image.Image,
     output_image = image.copy()
     draw = ImageDraw.Draw(output_image)
     
-    for label, box in zip(results.labels, results.boxes):
+    for label, box in zip(results['labels'], results['boxes']):
         box = [round(i, 2) for i in box.tolist()]
         x, y, x2, y2 = tuple(box)
         draw.rectangle((x, y, x2, y2), outline="red", width=1)

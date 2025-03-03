@@ -239,13 +239,16 @@ if __name__ == '__main__':
     model, image_processor, device = load_model()
     
     # Load dataset
-    dataset = read_data(consts.KITTI_MOTS_PATH_RELATIVE)
-    dataset = dataset['train']['image'][0:30]
+    dataset = read_data(consts.KITTI_MOTS_PATH_ALEX)
+    dataset = dataset['train']['image']
     
     # Run inference
-    results = run_inference(model, image_processor, dataset, device)
+    results = []
+    for i in range(0, len(dataset), 10):
+        batch = dataset[i:min(i + 10, len(dataset))]
+        results += run_inference(model, image_processor, batch, device)
 
     # Guardar en un archivo JSON
-    with open("predictions_30.json", "w") as file:
+    with open("predictions_all.json", "w") as file:
         json.dump(results, file, indent=4)  # `indent=4` para que el JSON sea legible
 
