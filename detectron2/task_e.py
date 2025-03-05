@@ -48,7 +48,7 @@ class WandBTrainer(DefaultTrainer):
 # Function to Train & Fine-Tune the Model
 def train_model():
     # Init WandB
-    wandb.init(project="C5-Week1", name="Detectron")
+    wandb.init(project=WANDB_PROJECT_NAME, name="Detectron2")
 
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
@@ -91,7 +91,7 @@ def run_hyperparameter_search(count=10):
         }
     }
 
-    sweep_id = wandb.sweep(sweep_config, project="KITTI_MOTS")
+    sweep_id = wandb.sweep(sweep_config, project=WANDB_PROJECT_NAME)
     wandb.agent(sweep_id, function=train_model, count=count)
 
 if __name__ == "__main__":
