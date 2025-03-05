@@ -1,5 +1,5 @@
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
-from detectron2.data import build_detection_test_loader
+from detectron2.data import build_detection_test_loader, DatasetCatalog
 
 import json
 import os
@@ -14,26 +14,21 @@ def evaluate_model(dataset_name, detector):
     Evaluate the model using COCO metrics (AP, IoU) on the KITTI MOTS dataset.
     
     Args:
-        dataset_name (str): Dataset name for testing (e.g., "kitti_mots_testing").
+        dataset_name (str): Dataset name.
         detector (Detector): The initialized Detector instance.
     """  
     print("Starting model evaluation...")
 
     # Create COCO evaluator
-    evaluator = COCOEvaluator(dataset_name, output_dir="output/")
+    evaluator = COCOEvaluator(dataset_name, detector.cfg, True, output_dir="evaluation/")
     
     # Build detection test dataloader
     val_loader = build_detection_test_loader(detector.cfg, dataset_name)
     
     # Perform evaluation
-    results = inference_on_dataset(detector.predictor.model, 
-                                   tqdm(val_loader, desc="Evaluting..."), evaluator)
+    results = inference_on_dataset(detector.predictor.model, val_loader, evaluator)
+
     print("Full evaluation results:", results)
-
-    # Save results
-    save_evaluation_results(results)
-    print("Evaluation completed. Results saved in './output/evaluation_results.json'")
-
 
 def save_evaluation_results(results):
     """
@@ -75,9 +70,12 @@ if __name__ == '__main__':
     # Register dataset
     dataset_path = consts.KITTI_MOTS_PATH
     register_kitti_mots(dataset_path)
-    dataset_name = "kitti_mots_testing"
+    dataset_name = "kitti_mots_training"
 
-    # Initialize Detector (ensuring model is loaded only once)
+    dataset_dicts = DatasetCatalog.get(dataset_name)
+    print("Loaded dataset samples:", dataset_dicts[:2]) 
+
+    # Initialize Detector
     detector = Detector()
 
     # Evaluate the model
