@@ -2,9 +2,8 @@ from detectron2.structures import BoxMode
 from detectron2.data import DatasetCatalog, MetadataCatalog
 
 import os
-from PIL import Image
 import numpy as np
-import cv2
+from pycocotools.mask import decode
 
 def mask_to_bbox(mask):
     """
@@ -24,73 +23,61 @@ def mask_to_bbox(mask):
 
 def load_kitti_mots_dataset(dataset_path, split="training"):
     images_dir = os.path.join(dataset_path, split, "image_02")
-    instances_dir = os.path.join(dataset_path, "instances") 
+    annotations_dir = os.path.join(dataset_path, "instances_txt") 
     dataset_dicts = []
     
-    kitti_to_coco = {2: 0, 1: 1}  # KITTI MOTS: Car (2) -> COCO: Car (0), 
-                                                # Pedestrian (1) -> COCO: Person (1)
+    kitti_to_coco = {2: 2, 1: 0}    # Car (2) -> COCO: Car (2), 
+                                    # Pedestrian (1) -> COCO: Person (0)
 
     for folder in sorted(os.listdir(images_dir)):
         folder_path = os.path.join(images_dir, folder)
-        instance_folder_path = os.path.join(instances_dir, folder)
+        annotation_file = os.path.join(annotations_dir, f"{folder}.txt")
         
         print(f"Processing folder: {folder}") 
         
-        for _, img_file in enumerate(sorted(os.listdir(folder_path))):
-            if not img_file.endswith(".png"):
-                continue
-
-            image_path = os.path.join(folder_path, img_file)
-            instance_path = os.path.join(instance_folder_path, img_file)
+        if not os.path.exists(annotation_file):
+            print(f"Warning: Missing annotation file for {folder}")
+            continue
+        
+        with open(annotation_file, "r") as f:
+            annotations = f.readlines()
+        
+        frame_to_annotations = {}
+        
+        for line in annotations:
+            parts = line.strip().split(" ")
+            frame_id, _, class_id, h, w = map(int, parts[:5])
+            rle_mask = " ".join(parts[5:])
             
-            height, width = Image.open(image_path).size[::-1]
+            img_path = os.path.join(folder_path, f"{frame_id:06d}.png")
+            if not os.path.exists(img_path):
+                continue  # Skip missing images
             
-            record = {
-                "file_name": image_path,
-                "image_id": len(dataset_dicts),
-                "height": height,
-                "width": width,
-                "annotations": []
-            }
+            rle = {'size': [h, w], 'counts': rle_mask.encode('utf-8')}
+            binary_mask = decode(rle)  # Convert RLE to binary mask
             
-            if not os.path.exists(instance_path):
-                print(f"Warning: Instance mask missing for {img_file}")
-                continue
-            
-            print(f"Processing image: {img_file}") 
-            
-            instance_mask = cv2.imread(instance_path, cv2.IMREAD_UNCHANGED)
-            if instance_mask is None:
-                print(f"Error: Could not read instance mask {instance_path}")
+            bbox = mask_to_bbox(binary_mask)
+            if bbox is None:
                 continue
             
-            unique_instance_ids = np.unique(instance_mask)
-            print(f"Unique instance IDs in mask: {unique_instance_ids}") 
-            
-            for instance_id in unique_instance_ids:
-                # Background
-                if instance_id == 0:
-                    continue 
-                
-                category_id = instance_id // 1000
-                if category_id not in kitti_to_coco:
-                    continue
-                
-                binary_mask = (instance_mask == instance_id).astype(np.uint8)
-                bbox = mask_to_bbox(binary_mask)
-                if bbox is None:
-                    continue
-                
-                print(f"Instance ID: {instance_id}, Category: {category_id}, BBox: {bbox}") 
-                
-                obj = {
-                    "bbox": bbox,
-                    "bbox_mode": BoxMode.XYWH_ABS,
-                    "category_id": kitti_to_coco[category_id],
+            if frame_id not in frame_to_annotations:
+                frame_to_annotations[frame_id] = {
+                    "file_name": img_path,
+                    "image_id": len(dataset_dicts),
+                    "height": h,
+                    "width": w,
+                    "annotations": []
                 }
-                record["annotations"].append(obj)
             
-            dataset_dicts.append(record)
+            obj = {
+                "bbox": bbox,
+                "bbox_mode": BoxMode.XYXY_ABS,
+                "segmentation": [binary_mask.tolist()], 
+                "category_id": kitti_to_coco.get(class_id, -1),
+            }
+            frame_to_annotations[frame_id]["annotations"].append(obj)
+        
+        dataset_dicts.extend(frame_to_annotations.values())
     
     return dataset_dicts
 
@@ -110,7 +97,8 @@ def register_kitti_mots(dataset_path):
 
         # Define metadata
         MetadataCatalog.get(dataset_name).set(
-            thing_classes=["Car", "Pedestrian"],  # KITTI MOTS classes
+            thing_classes=["Car", "Pedestrian"],            # Match COCO class names
+            thing_dataset_id_to_contiguous_id={0:0, 2:1},   # Person --> 0, Car --> 1
             evaluator_type="coco",
         )
 

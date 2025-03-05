@@ -12,14 +12,14 @@ def main():
     dataset_path = consts.KITTI_MOTS_PATH
     register_kitti_mots(dataset_path)
 
-    dataset_name = "kitti_mots_testing"
+    dataset_name = "kitti_mots_training"
     dataset_dicts = DatasetCatalog.get(dataset_name)
 
     # Load model
     detector = Detector()
 
     # Output directory
-    output_dir = "detectron2_kitti_mots"
+    output_dir = "detectron2_inference"
     os.makedirs(output_dir, exist_ok=True)
 
     for idx, sample in enumerate(dataset_dicts[:10]):
