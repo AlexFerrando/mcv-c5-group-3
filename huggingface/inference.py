@@ -21,6 +21,7 @@ def load_model(model_name: str = consts.MODEL_NAME) -> Tuple[torch.nn.Module, Au
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     image_processor = AutoImageProcessor.from_pretrained(model_name)
     model = AutoModelForObjectDetection.from_pretrained(model_name)
+
     model.to(device)
     
     return model, image_processor, device

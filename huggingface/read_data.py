@@ -1,9 +1,9 @@
+from collections import defaultdict
 import os
-from typing import List, Dict
-import numpy as np
+from typing import List, Dict, Optional
 from datasets import Dataset, DatasetDict, Features, Image as HFImage, Value, Sequence
 from pycocotools.mask import toBbox
-from pycocotools.coco import COCO
+from consts import KIITI_TO_COCO_IDS
 
 def load_video_frames(folder: str) -> List[str]:
     """Load sorted image paths from a video sequence folder."""
@@ -20,108 +20,120 @@ def load_video_frames(folder: str) -> List[str]:
     return all_frames
 
 
-def load_images_and_annotations_for_video(video_folder: str, annotation_file: str, target_classes: List[int] = [1, 2]) -> Dict:
-    """
-    Load annotations and convert to COCO format, filtering for specific object classes.
-    
-    Args:
-        video_folder: Path to the folder containing image frames
-        annotation_file: Path to the annotation file
-        target_classes: List of class IDs to include (default: [1, 2] for 'car' and 'pedestrian')
-    
-    Returns:
-        Dictionary in COCO format with filtered annotations
-    """
-    with open(annotation_file, "r") as f:
-        annotations = f.readlines()
+def decode_rle_mask(rle_mask: str, img_h: int, img_w: int):
+    """Decode RLE mask into a bounding box."""
+    rle = {'size': [img_h, img_w], 'counts': rle_mask.encode('utf-8')}
+    x1, y1, h, w = tuple(toBbox(rle))  # Ensure `toBbox` is properly imported
+    return [x1 / img_w, y1 / img_h, (x1 + w) / img_w, (y1 + h) / img_h], h / img_h * w / img_w
 
-    frame_to_mask = {}
-    image_id_counter = 1
-    
+def load_images_and_annotations_for_video(
+    video_folder: str, 
+    annotation_file: str, 
+    target_classes: Optional[List[int]] = None
+) -> Dict[int, Dict]:
+    """
+    Load annotations and convert them to COCO format, filtering for specific object classes.
+
+    Args:
+        video_folder (str): Path to the folder containing image frames.
+        annotation_file (str): Path to the annotation file.
+        target_classes (List[int], optional): List of class IDs to include (default: [1, 2] for 'car' and 'pedestrian').
+
+    Returns:
+        Dict[int, Dict]: Dictionary in COCO format with filtered annotations.
+    """
+    target_classes = target_classes or [1, 2]  # Default to cars & pedestrians if not provided
+    frames_info = defaultdict(lambda: {
+        "image": "",
+        "frame_id": 0,
+        "orig_size": [],
+        "area": [],
+        "track_id": [],
+        "class_labels": [],
+        "boxes": [],
+        "iscrowd": []
+    })
+
+    if not os.path.exists(annotation_file):
+        raise FileNotFoundError(f"Annotation file not found: {annotation_file}")
+
+    try:
+        with open(annotation_file, "r") as f:
+            annotations = f.readlines()
+    except Exception as e:
+        raise RuntimeError(f"Error reading annotation file: {e}")
+
     for line in annotations:
         parts = line.strip().split(" ")
-        frame_id, track_id, category_id, h, w = map(int, parts[:5])
-        rle_mask = " ".join(parts[5:])
+        if len(parts) < 6:
+            print(f"Skipping invalid annotation line: {line}")  # Debugging
+            continue
 
-        # Skip annotations for classes we're not interested in
-        # if category_id not in target_classes:
-        #     continue
-            
+        try:
+            frame_id, track_id, category_id, img_h, img_w = map(int, parts[:5])
+            rle_mask = " ".join(parts[5:])
+        except ValueError:
+            print(f"Skipping corrupt annotation line: {line}")  # Debugging
+            continue
+
+        if category_id not in target_classes:
+            continue
+
+        category_id = KIITI_TO_COCO_IDS[category_id]
+
         img_path = os.path.join(video_folder, f"{frame_id:06d}.png")
-        if not os.path.exists(img_path):
-            continue  # Skip missing images
+        bbox, area = decode_rle_mask(rle_mask, img_h, img_w)
 
-        # Decode RLE mask
-        rle = {'size': [h, w], 'counts': rle_mask.encode('utf-8')}
-        bbox = toBbox(rle).tolist()
-        
-        # Calculate area from bbox [x, y, width, height]
-        area_value = bbox[2] * bbox[3]  # width * height
+        frame_data = frames_info[frame_id]
+        frame_data["image"] = img_path
+        frame_data["frame_id"] = frame_id
+        frame_data["orig_size"] = [img_h, img_w]
+        frame_data["track_id"].append(track_id)
+        frame_data["class_labels"].append(category_id)
+        frame_data["boxes"].append(bbox)
+        frame_data["area"].append(area)
+        frame_data["iscrowd"].append(0)
 
-        # Create or update the image entry
-        if frame_id not in frame_to_mask:
-            frame_to_mask[frame_id] = {
-                "image": img_path,
-                "frame_id": frame_id,
-                "area": [],
-                "orig_size": [],
-                "track_id": [],
-                "category_id": [],
-                "bbox": [],
-                "iscrowd": []
-            }
-            # Add image metadata for COCO format
-            frame_to_mask[frame_id]["image_id"] = image_id_counter
-            image_id_counter += 1
-            
-        # Store frame annotation
-        frame_to_mask[frame_id]["track_id"].append(track_id)
-        frame_to_mask[frame_id]["category_id"].append(category_id)
-        frame_to_mask[frame_id]["bbox"].append(bbox)
-        frame_to_mask[frame_id]["area"].append(area_value)
-        frame_to_mask[frame_id]["orig_size"].append([h, w])
-        frame_to_mask[frame_id]["iscrowd"].append(0)
-
-    return frame_to_mask
+    return dict(frames_info)
         
 
-
-def load_images_and_annotations(image_folder: str, annotation_folder: str) -> Dict:
+def load_images_and_annotations(image_folder: str, annotation_folder: str) -> Dict[str, List]:
     """Load image paths and corresponding annotation masks."""
-    images, bboxes, track_ids, category_ids, frame_ids, orig_sizes, areas, iscrowds = [], [], [], [], [], [], [], []
 
-    sequences = sorted(os.listdir(image_folder))
-    for seq in sequences:
+    if not os.path.exists(image_folder):
+        raise FileNotFoundError(f"Image folder not found: {image_folder}")
+    if not os.path.exists(annotation_folder):
+        raise FileNotFoundError(f"Annotation folder not found: {annotation_folder}")
+
+    dataset = {
+        "image": [], "boxes": [], "track_id": [], "class_labels": [],
+        "frame_id": [], "orig_size": [], "area": [], "iscrowd": []
+    }
+
+    for seq in sorted(os.listdir(image_folder)):
+        if seq.startswith('.'):
+            continue
+        
         seq_img_folder = os.path.join(image_folder, seq)
         seq_anno_file = os.path.join(annotation_folder, f"{seq}.txt")
 
         if not os.path.exists(seq_anno_file):
-            continue  # Skip sequences with no annotations
+            print(f"Warning: Annotation file missing for sequence {seq}. Skipping...")
+            continue
 
-        # Load annotations
         frame_to_mask = load_images_and_annotations_for_video(seq_img_folder, seq_anno_file)
 
-        # Collect dataset entries
         for frame_data in frame_to_mask.values():
-            images.append(frame_data["image"])
-            bboxes.append(frame_data["bbox"])
-            track_ids.append(frame_data["track_id"])
-            category_ids.append(frame_data["category_id"])
-            frame_ids.append(frame_data["frame_id"])
-            orig_sizes.append(frame_data["orig_size"])
-            areas.append(frame_data["area"])
-            iscrowds.append(frame_data["iscrowd"])
+            dataset["image"].append(frame_data["image"])
+            dataset["boxes"].append(frame_data["boxes"])
+            dataset["track_id"].append(frame_data["track_id"])
+            dataset["class_labels"].append(frame_data["class_labels"])
+            dataset["frame_id"].append(frame_data["frame_id"])
+            dataset["orig_size"].append(frame_data["orig_size"])
+            dataset["area"].append(frame_data["area"])
+            dataset["iscrowd"].append(frame_data["iscrowd"])
 
-    return {
-        "image": images,
-        "bbox": bboxes,
-        "track_id": track_ids,
-        "category_id": category_ids,
-        "frame_id": frame_ids,
-        "orig_size": orig_sizes,
-        "area": areas,
-        "iscrowd": iscrowds
-    }
+    return dataset
 
 
 def read_test_data(data_path: str) -> Dataset:
@@ -133,19 +145,19 @@ def read_train_data(data_path: str) -> Dataset:
     image_folder = os.path.join(data_path, 'training/image_02')
     annotation_folder = os.path.join(data_path, 'instances_txt')
     data = load_images_and_annotations(image_folder, annotation_folder)
-    return Dataset.from_dict(data, features=get_features())
+    return Dataset.from_dict(data, features=get_train_features())
 
-def get_features() -> Features:
+def get_train_features() -> Features:
     """Define dataset features for Hugging Face `Dataset`."""
     return Features({
         "image": HFImage(),  # Image path, automatically converted to PIL
         "frame_id": Value("int32"),
         "track_id": Sequence(Value("int32")),
-        "category_id": Sequence(Value("int32")),  # Match compute_metrics
-        "bbox": Sequence(Sequence(Value("float32"))),  # Ensure correct format
-        "orig_size": Sequence(Sequence(Value("int32"))),  # Store original image size (h, w)
-        "area": Sequence(Value("float32")),  # Area of bounding box
-        "iscrowd": Sequence(Value("int32"))  # Required field for COCO
+        "class_labels": Sequence(Value("int32")),
+        "boxes": Sequence(Sequence(Value("float32"))),  # List of bounding boxes
+        "orig_size": Sequence(Value("int32")),  # Alternative: Array(2, "int32")
+        "area": Sequence(Value("float32")),  # Consistency with bbox
+        "iscrowd": Sequence(Value("int32"))
     })
 
 def read_data(data_path: str) -> DatasetDict:
@@ -153,6 +165,3 @@ def read_data(data_path: str) -> DatasetDict:
         'train': read_train_data(data_path),
         'test': read_test_data(data_path)
     })
-
-def read_annotations(annotation_file: str) -> COCO:
-    return COCO(annotation_file)

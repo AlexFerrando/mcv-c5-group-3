@@ -34,6 +34,13 @@ def inverse_mapping_class_id(dataset: str=None, class_id: int=None):
         elif class_id == 2:  # 'person'
             return 1
 
+
+# Classes mapping
+KIITI_TO_COCO_IDS = {
+    1: 3, # 'car'
+    2: 1, # 'pedestrian'
+}
+
 @dataclass
 class DetectionResults:
     scores: Tensor
