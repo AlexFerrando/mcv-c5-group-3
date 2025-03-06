@@ -74,6 +74,19 @@ def all_gather(data):
     return data_list
 
 
+def format_results_to_coco(results):
+    formatted_results = {}
+    for i, result in enumerate(results):
+        labels = result["labels"]
+        mapped_labels = torch.where(labels == 3, torch.tensor(1), torch.where(labels == 1, torch.tensor(2), labels))
+
+        formatted_results[i + 1] = {
+            'labels': mapped_labels,
+            'boxes': result["boxes"],
+            'scores': result["scores"],
+        }
+    return formatted_results
+
 class CocoEvaluator(object):
     def __init__(self, coco_gt, iou_types = ["bbox"]):
         assert isinstance(iou_types, (list, tuple))
