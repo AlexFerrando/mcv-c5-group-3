@@ -143,7 +143,7 @@ from transformers import Trainer
 from read_data import read_data
 import consts
 
-DATA_PATH = consts.KITTI_MOTS_PATH_ALEX
+DATA_PATH = consts.KITTI_MOTS_PATH
 
 data = read_data(DATA_PATH)
 train_data = data["train"]
