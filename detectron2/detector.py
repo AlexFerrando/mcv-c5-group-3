@@ -24,15 +24,15 @@ class Detector:
         self.cfg.DATASETS.TEST = ("kitti_mots_training",)
 
         # Model settings
-        self.cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2
-        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.6
+        self.cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2  # Active only for evaluation
+        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5 # 0.5 for Inference
         self.cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
         self.predictor = DefaultPredictor(self.cfg)
 
         # self.metadata = MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0])
-        # self.metadata = MetadataCatalog.get("coco_2017_val") # COCO metadata
-        self.metadata = MetadataCatalog.get("kitti_mots_training") # COCO metadata
+        # self.metadata = MetadataCatalog.get("coco_2017_val")
+        self.metadata = MetadataCatalog.get("kitti_mots_training")
 
     def run_inference(self, image: Image.Image) -> Dict:
         """
@@ -50,7 +50,7 @@ class Detector:
 
         # Keep valid detections
         outputs["instances"] = instances[keep]
-
+        print(outputs)
         return outputs
     
     def visualize_detections(self, image: Image.Image,
@@ -59,11 +59,11 @@ class Detector:
         """
         Visualize object detection results on an image.
         """
-        image_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        image_cv = np.array(image)
         
-        visualizer = Visualizer(image_cv[:, :, ::-1], self.metadata, scale=0.8)
+        visualizer = Visualizer(image_cv, self.metadata, scale=0.8)
         output = visualizer.draw_instance_predictions(results["instances"].to("cpu"))
-        output_image = Image.fromarray(cv2.cvtColor(output.get_image(), cv2.COLOR_BGR2RGB))
+        output_image = Image.fromarray(output.get_image())
         
         if output_path:
             output_image.save(output_path)
