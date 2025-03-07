@@ -179,8 +179,8 @@ print(test_videos)
 print(data["train"].column_names)
 
 # Filter the dataset based on the sorted video split
-train_data = data["train"].filter(lambda x: x["video"] in train_videos, input_columns=["video"], num_proc=4)
-test_data = data["train"].filter(lambda x: x["video"] in test_videos, input_columns=["video"], num_proc=4)
+train_data = data["train"].filter(lambda x: x["video"] in train_videos, num_proc=4)
+test_data = data["train"].filter(lambda x: x["video"] in test_videos, num_proc=4)
 
 # Setup Wandb
 wandb.login(key='395ee0b4fb2e10004d480c7d2ffe03b236345ddc')
