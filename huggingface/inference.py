@@ -7,7 +7,8 @@ from PIL import Image, ImageDraw
 from transformers import AutoImageProcessor, AutoModelForObjectDetection, DetrForObjectDetection
 from typing import List, Tuple, Optional, Union, Dict
 from read_data import read_data
-
+from consts import inverse_mapping_class_id
+import json
 
 def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False) -> Tuple[torch.nn.Module, AutoImageProcessor, torch.device]:
     """
@@ -62,7 +63,7 @@ def run_inference(model: torch.nn.Module,
                  images: Union[Image.Image, List[Image.Image]], 
                  device: torch.device,
                  threshold: float = 0.9,
-                 output_format: str = 'other') -> List[DetectionResults]:
+                 output_format: str = 'coco') -> List[DetectionResults]:
     """
     Run object detection inference on one or multiple images.
     
@@ -95,12 +96,39 @@ def run_inference(model: torch.nn.Module,
         target_sizes=target_sizes
     )
 
-    # Filter the detection to get only the desired ones: 'car' (id=1) and 'pedestrian' (id=2)
-    filtered_detections = filter_and_correct_detections(batch_results, model.config.id2label)
-    return filtered_detections
+    # Filter the detection to get only the desired ones: 'car' (id=3 in DeTR) and 'person' (id=1 in DeTR)
+    filtered_detections = filter_detections_by_id(batch_results, id = [1,3])
+
+    # Post process results to get apropiate format
+    if output_format == 'coco':
+        results = coco_reformat(results=filtered_detections, img_size=target_sizes)
+    
+    else:
+        results = []
+        for i, image in enumerate(images):
+            result = filtered_detections[i]
+            
+            results.append(DetectionResults(
+                scores=result['scores'],
+                boxes=result['boxes'],
+                labels=result['labels']
+            ))
+            
+    return results
 
 
-def filter_and_correct_detections(results: List[Dict], id2label: Dict) -> List[Dict]:
+def filter_detections_by_id(results: List[Dict], id: List[int]=[1, 2]) -> List[Dict]:
+    """
+    Filter detection results to only keep detections with labels matching the specified IDs.
+    
+    Args:
+        results: List of dictionaries, each with 'scores', 'labels', and 'boxes' keys
+        id: List of label IDs to keep (defaults to [1, 2] which typically are 'car' and 'person')
+    
+    Returns:
+        List of dictionaries with filtered detections
+    """
+
     filtered_results = []
     
     for result in results:
@@ -110,93 +138,76 @@ def filter_and_correct_detections(results: List[Dict], id2label: Dict) -> List[D
             'labels': [],
             'boxes': []
         }
+        
         # Only keep detections with matching labels
         for score, label, box in zip(result['scores'], result['labels'], result['boxes']):
             # Check if this label is in our list of IDs to keep
-            if id2label[label.item()] in ['car', 'person']:
+            if label.item() in id:
                 filtered_result['scores'].append(score)
                 filtered_result['labels'].append(label)
                 filtered_result['boxes'].append(box)
         
-        if len(filtered_result['scores']) != 0:
+        # Convert lists back to tensors if needed
+        if filtered_result['scores']:
             filtered_result['scores'] = torch.stack(filtered_result['scores'])
             filtered_result['labels'] = torch.stack(filtered_result['labels'])
             filtered_result['boxes'] = torch.stack(filtered_result['boxes'])
-            
-            filtered_results.append(filtered_result)
+        
+        filtered_results.append(filtered_result)
     
     return filtered_results
 
 
-def print_detection_results(results: DetectionResults, model_config: torch.nn.Module) -> None:
+def coco_reformat(results: List[Dict], img_size: Tuple[int, int]) -> List[Dict]:
     """
-    Print detection results.
+    Converts a list of detection dictionaries to COCO prediction format.
     
     Args:
-        results: Detection results for a single image
-        model_config: Model configuration containing label mapping
-    """
-    for i, _ in enumerate(results):
-        for score, label, box in zip(results[i].scores, results[i].labels, results[i].boxes):
-            box = [round(i, 2) for i in box.tolist()]
-            print(
-                f"Detected {model_config.id2label[label.item()]} with confidence "
-                f"{round(score.item(), 3)} at location {box}"
-            )
-
-
-def visualize_detections(image: Image.Image, 
-                        results: Dict, 
-                        model_config: torch.nn.Module,
-                        output_path: Optional[str] = None) -> Image.Image:
-    """
-    Visualize object detection results on an image.
-    
-    Args:
-        image: Original image
-        results: Detection results
-        model_config: Model configuration containing label mapping
-        output_path: Path to save the output image (optional)
+        results: List of dictionaries with 'scores', 'labels', and 'boxes' keys
+        img_size: Tuple containing image dimensions
     
     Returns:
-        Image with detections visualized
+        List of dictionaries in COCO format with 'image_id', 'category_id', 'bbox', and 'score'
     """
+    coco_predictions = []
 
-    # Create a copy to avoid modifying the original
-    output_image = image.copy()
-    draw = ImageDraw.Draw(output_image)
-    
-    for label, box in zip(results['labels'], results['boxes']):
-        box = [round(i, 2) for i in box.tolist()]
-        x, y, x2, y2 = tuple(box)
-        draw.rectangle((x, y, x2, y2), outline="red", width=1)
-        draw.text((x, y), model_config.id2label[label.item()], fill="white")
-    
-    # Save the image if output path is provided
-    if output_path:
-        output_image.save(output_path)
-    
-    return output_image
+    # Process each image's detection results
+    for image_id, result in enumerate(results, 1):
+        if 'scores' in result and len(result['scores']) > 0:
+            for score, label, box in zip(result['scores'], result['labels'], result['boxes']):
+                # Convert box format from [x1, y1, x2, y2] to [x, y, width, height]
+                box_data = box.tolist()
+                x1, y1, x2, y2 = box_data
+                width = x2 - x1
+                height = y2 - y1
+                
+                # Create prediction entry
+                prediction = {
+                    'image_id': image_id,
+                    'category_id': inverse_mapping_class_id('coco', int(label.item())),  # Map class IDs
+                    'bbox': [x1, y1, width, height],
+                    'score': float(score.item())  # Ensure it's a float
+                }
+                
+                coco_predictions.append(prediction)
+
+    return coco_predictions
 
 
 if __name__ == '__main__':
-    
+
+    DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
+
     # Load model
     model, image_processor, device = load_model()
     
     # Load dataset
-    dataset = read_data(consts.KITTI_MOTS_PATH_ALEX)
-    dataset = dataset['train']['image'][0:10]
+    dataset = read_data(DATASET_PATH)
+    dataset = dataset['train']['image']
     
-    # Run inference
     results = run_inference(model, image_processor, dataset, device)
-    
-    # Print results
-    print_detection_results(results, model.config)
-    
-    # Visualize and save
-    for i, image in enumerate(dataset):
-        
-        output_path = f"output_{i}.jpg"
-        visualize_detections(image, results[i], model.config, output_path)
-        print(f"Output saved to {output_path}")
+
+    # Save the gt_coco as a JSON file
+    output_json_path = 'results_coco_0000.json'
+    with open(output_json_path, 'w') as f:
+        json.dump(results, f, indent=4)
