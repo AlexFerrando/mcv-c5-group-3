@@ -3,7 +3,6 @@ import os
 from typing import List, Dict, Optional
 from datasets import Dataset, DatasetDict, Features, Image as HFImage, Value, Sequence
 from pycocotools.mask import toBbox
-from consts import KIITI_TO_COCO_IDS
 
 def load_video_frames(folder: str) -> List[str]:
     """Load sorted image paths from a video sequence folder."""
@@ -21,10 +20,11 @@ def load_video_frames(folder: str) -> List[str]:
 
 
 def decode_rle_mask(rle_mask: str, img_h: int, img_w: int):
-    """Decode RLE mask into a bounding box."""
+    """Decode RLE mask into a bounding box (xcenter, ycenter, w, h)."""
     rle = {'size': [img_h, img_w], 'counts': rle_mask.encode('utf-8')}
-    x1, y1, h, w = tuple(toBbox(rle))  # Ensure `toBbox` is properly imported
-    return [x1 / img_w, y1 / img_h, (x1 + w) / img_w, (y1 + h) / img_h], h / img_h * w / img_w
+    x1, y1, w, h = tuple(toBbox(rle))  # Ensure `toBbox` is properly imported
+    return [x1, y1, x1 + w, y1 + h], h*w
+
 
 def load_images_and_annotations_for_video(
     video_folder: str, 
@@ -45,13 +45,12 @@ def load_images_and_annotations_for_video(
     target_classes = target_classes or [1, 2]  # Default to cars & pedestrians if not provided
     frames_info = defaultdict(lambda: {
         "image": "",
-        "frame_id": 0,
+        "image_id": 0,
         "orig_size": [],
         "area": [],
         "track_id": [],
         "class_labels": [],
         "boxes": [],
-        "iscrowd": []
     })
 
     if not os.path.exists(annotation_file):
@@ -70,7 +69,7 @@ def load_images_and_annotations_for_video(
             continue
 
         try:
-            frame_id, track_id, category_id, img_h, img_w = map(int, parts[:5])
+            image_id, track_id, category_id, img_h, img_w = map(int, parts[:5])
             rle_mask = " ".join(parts[5:])
         except ValueError:
             print(f"Skipping corrupt annotation line: {line}")  # Debugging
@@ -79,20 +78,17 @@ def load_images_and_annotations_for_video(
         if category_id not in target_classes:
             continue
 
-        category_id = KIITI_TO_COCO_IDS[category_id]
-
-        img_path = os.path.join(video_folder, f"{frame_id:06d}.png")
+        img_path = os.path.join(video_folder, f"{image_id:06d}.png")
         bbox, area = decode_rle_mask(rle_mask, img_h, img_w)
 
-        frame_data = frames_info[frame_id]
+        frame_data = frames_info[image_id]
         frame_data["image"] = img_path
-        frame_data["frame_id"] = frame_id
+        frame_data["image_id"] = image_id
         frame_data["orig_size"] = [img_h, img_w]
         frame_data["track_id"].append(track_id)
         frame_data["class_labels"].append(category_id)
         frame_data["boxes"].append(bbox)
         frame_data["area"].append(area)
-        frame_data["iscrowd"].append(0)
 
     return dict(frames_info)
         
@@ -107,7 +103,7 @@ def load_images_and_annotations(image_folder: str, annotation_folder: str) -> Di
 
     dataset = {
         "image": [], "boxes": [], "track_id": [], "class_labels": [],
-        "frame_id": [], "orig_size": [], "area": [], "iscrowd": []
+        "image_id": [], "orig_size": [], "area": [],
     }
 
     for seq in sorted(os.listdir(image_folder)):
@@ -128,10 +124,9 @@ def load_images_and_annotations(image_folder: str, annotation_folder: str) -> Di
             dataset["boxes"].append(frame_data["boxes"])
             dataset["track_id"].append(frame_data["track_id"])
             dataset["class_labels"].append(frame_data["class_labels"])
-            dataset["frame_id"].append(frame_data["frame_id"])
+            dataset["image_id"].append(frame_data["image_id"])
             dataset["orig_size"].append(frame_data["orig_size"])
             dataset["area"].append(frame_data["area"])
-            dataset["iscrowd"].append(frame_data["iscrowd"])
 
     return dataset
 
@@ -151,13 +146,12 @@ def get_train_features() -> Features:
     """Define dataset features for Hugging Face `Dataset`."""
     return Features({
         "image": HFImage(),  # Image path, automatically converted to PIL
-        "frame_id": Value("int32"),
+        "image_id": Value("int32"),
         "track_id": Sequence(Value("int32")),
         "class_labels": Sequence(Value("int32")),
         "boxes": Sequence(Sequence(Value("float32"))),  # List of bounding boxes
         "orig_size": Sequence(Value("int32")),  # Alternative: Array(2, "int32")
         "area": Sequence(Value("float32")),  # Consistency with bbox
-        "iscrowd": Sequence(Value("int32"))
     })
 
 def read_data(data_path: str) -> DatasetDict:
