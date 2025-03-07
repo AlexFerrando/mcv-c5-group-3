@@ -4,7 +4,7 @@ from pycocotools.mask import toBbox
 import json
 
 
-def load_images_and_annotations_for_video(video_folder: str, annotation_file: str, target_classes: List[int] = [1, 2]) -> Dict:
+def load_images_and_annotations_for_video(video_name: str, target_classes: List[int] = [1, 2]) -> Dict:
     """
     Load annotations and convert to COCO format, filtering for specific object classes.
     
@@ -16,6 +16,10 @@ def load_images_and_annotations_for_video(video_folder: str, annotation_file: st
     Returns:
         Dictionary in COCO format with filtered annotations
     """
+
+    video_folder = DATASET_PATH+f'/training/image_02/{video_name}'
+    annotation_file = DATASET_PATH+f'/instances_txt/{video_name}.txt'
+
     with open(annotation_file, "r") as f:
         annotations = f.readlines()
 
@@ -107,14 +111,30 @@ def load_images_and_annotations_for_video(video_folder: str, annotation_file: st
     return coco_format
 
 
-if __name__ == '__main__':
-    video0000_folder = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS/training/image_02/0000'
-    annotations_folder = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS/instances_txt/0000.txt'
-
-    gt_coco = load_images_and_annotations_for_video(video0000_folder, annotations_folder)
+def save_GroundTruth(predictions: List[Dict], video_name: str) -> None:
     
-    # Save the gt_coco as a JSON file
-    output_json_path = 'gt_coco_0000.json'
+    # Definir la ruta de salida
+    output_folder = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/huggingface/evaluation_results/off-the-shelf/ground_truth'
+    os.makedirs(output_folder, exist_ok=True)  # Crea la carpeta si no existe
+
+    # Definir la ruta del archivo
+    output_json_path = f'{output_folder}/gt_coco_{video_name}.json'
+
+    # Guardar el JSON
     with open(output_json_path, 'w') as f:
-        json.dump(gt_coco, f, indent=4)
-    print(f"Ground truth COCO annotations saved to: {output_json_path}")
+        json.dump(predictions, f, indent=4)
+
+
+if __name__ == '__main__':
+
+    DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
+
+    # Get video names
+    videos = os.listdir(DATASET_PATH+'/training/image_02')[1:]
+            
+    for video_name in videos:
+        gt_coco = load_images_and_annotations_for_video(video_name)
+        
+        save_GroundTruth(gt_coco, video_name)
+    
+    print(f"Ground truth saved in COCO format for all the videos!")
