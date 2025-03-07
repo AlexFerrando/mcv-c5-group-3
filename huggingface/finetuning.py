@@ -122,7 +122,7 @@ eval_compute_metrics_fn = partial(
 # Define training arguments
 training_args = TrainingArguments(
     output_dir="./outputs/alex/detr_finetuned",
-    num_train_epochs=30,
+    num_train_epochs=5,
     fp16=False,
     per_device_train_batch_size=16, # Change to 1 locally
     per_device_eval_batch_size=16, # Change to 1 locally
