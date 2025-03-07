@@ -163,24 +163,18 @@ train_transform_batch = partial(
     augment_and_transform_batch, transform=train_augment_and_transform, image_processor=image_processor
 )
 
-data["train"] = data["train"].with_transform(train_transform_batch)
-# Get unique videos and sort them
 unique_videos = sorted(data["train"].unique("video"))
-
+# Filter the dataset based on the sorted video split
 # Determine the split index (80% for training, 20% for testing)
 split_idx = int(0.8 * len(unique_videos))
-
 # Split the videos into training and testing sets
 train_videos = set(unique_videos[:split_idx])
 test_videos = set(unique_videos[split_idx:])
-
-print(train_videos)
-print(test_videos)
-print(data["train"].column_names)
-
-# Filter the dataset based on the sorted video split
 train_data = data["train"].filter(lambda x: x["video"] in train_videos, num_proc=4)
 test_data = data["train"].filter(lambda x: x["video"] in test_videos, num_proc=4)
+
+train_data = train_data.with_transform(train_transform_batch)
+test_data = test_data.with_transform(partial(augment_and_transform_batch, image_processor=image_processor))
 
 # Setup Wandb
 wandb.login(key='395ee0b4fb2e10004d480c7d2ffe03b236345ddc')
@@ -194,8 +188,8 @@ wandb.init(
 trainer = Trainer(
     model=model,
     args=training_args,
-    train_dataset=train_data["train"],
-    eval_dataset=train_data["test"],
+    train_dataset=train_data,
+    eval_dataset=train_data,
     processing_class=image_processor,
     data_collator=collate_fn,
     compute_metrics=eval_compute_metrics_fn,
