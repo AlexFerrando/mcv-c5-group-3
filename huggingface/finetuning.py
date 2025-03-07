@@ -143,7 +143,7 @@ training_args = TrainingArguments(
 )
 
 # Load dataset
-data = read_data(consts.KITTI_MOTS_PATH_ALEX)
+data = read_data(consts.KITTI_MOTS_PATH)
 
 # Clean and transform data
 train_augment_and_transform = A.Compose(
