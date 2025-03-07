@@ -171,15 +171,16 @@ unique_videos = sorted(data["train"].unique("video"))
 split_idx = int(0.8 * len(unique_videos))
 
 # Split the videos into training and testing sets
-train_videos = unique_videos[:split_idx]
-test_videos = unique_videos[split_idx:]
+train_videos = set(unique_videos[:split_idx])
+test_videos = set(unique_videos[split_idx:])
 
 print(train_videos)
 print(test_videos)
+print(data["train"].column_names)
 
 # Filter the dataset based on the sorted video split
-train_data = data["train"].filter(lambda x: x["video"] in train_videos)
-test_data = data["train"].filter(lambda x: x["video"] in test_videos)
+train_data = data["train"].filter(lambda x: x["video"] in train_videos, input_columns=["video"], num_proc=4)
+test_data = data["train"].filter(lambda x: x["video"] in test_videos, input_columns=["video"], num_proc=4)
 
 # Setup Wandb
 wandb.login(key='395ee0b4fb2e10004d480c7d2ffe03b236345ddc')
