@@ -126,7 +126,7 @@ eval_compute_metrics_fn = partial(
 
 # Define training arguments
 training_args = TrainingArguments(
-    output_dir="detr_finetuned",
+    output_dir="./outputs/alex/detr_finetuned",
     num_train_epochs=30,
     fp16=False,
     per_device_train_batch_size=8,
@@ -139,7 +139,7 @@ training_args = TrainingArguments(
     greater_is_better=True,
     load_best_model_at_end=True,
     eval_strategy="epoch",
-    save_strategy="best",
+    save_strategy="epoch",
     save_total_limit=1,
     remove_unused_columns=False,
     eval_do_concat_batches=False,
