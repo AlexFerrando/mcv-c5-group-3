@@ -147,7 +147,7 @@ training_args = TrainingArguments(
 )
 
 # Load dataset
-data = read_data(consts.KITTI_MOTS_PATH_ALEX)
+data = read_data(consts.KITTI_MOTS_PATH)
 train_data = data["train"].train_test_split(test_size=0.2)
 
 # Setup Wandb
