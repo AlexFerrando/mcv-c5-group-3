@@ -124,8 +124,8 @@ training_args = TrainingArguments(
     output_dir="./outputs/alex/detr_finetuned",
     num_train_epochs=5,
     fp16=False,
-    per_device_train_batch_size=16, # Change to 1 locally
-    per_device_eval_batch_size=16, # Change to 1 locally
+    per_device_train_batch_size=4, # Change to 1 locally
+    per_device_eval_batch_size=4, # Change to 1 locally
     dataloader_num_workers=4, # Change to 0 locally
     learning_rate=5e-5,
     lr_scheduler_type="cosine",
@@ -133,13 +133,16 @@ training_args = TrainingArguments(
     max_grad_norm=0.01,
     metric_for_best_model="eval_map",
     greater_is_better=True,
-    load_best_model_at_end=True,
-    eval_strategy="epoch",
+    load_best_model_at_end=False, # True if we want to load the best model at the end of training
+    eval_strategy="steps",
+    eval_steps=400,
     save_strategy="epoch",
     save_total_limit=1,
     remove_unused_columns=False,
     eval_do_concat_batches=False,
     push_to_hub=False,
+    logging_dir="./outputs/alex/logs",
+    logging_steps=10,
 )
 
 # Load dataset
@@ -147,13 +150,12 @@ data = read_data(consts.KITTI_MOTS_PATH)
 
 # Clean and transform data
 train_augment_and_transform = A.Compose(
-    # [
-    #     A.Perspective(p=0.1),
-    #     A.HorizontalFlip(p=0.5),
-    #     A.RandomBrightnessContrast(p=0.5),
-    #     A.HueSaturationValue(p=0.1),
-    # ],
-    [A.NoOp()],
+    [
+        A.Perspective(p=0.1),
+        A.HorizontalFlip(p=0.5),
+        A.RandomBrightnessContrast(p=0.5),
+        A.HueSaturationValue(p=0.1),
+    ],
     bbox_params=A.BboxParams(format="coco", label_fields=["category"], clip=True, min_area=25),
 )
 
@@ -162,7 +164,22 @@ train_transform_batch = partial(
 )
 
 data["train"] = data["train"].with_transform(train_transform_batch)
-train_data = data["train"].train_test_split(test_size=0.2)
+# Get unique videos and sort them
+unique_videos = sorted(data["train"].unique("video"))
+
+# Determine the split index (80% for training, 20% for testing)
+split_idx = int(0.8 * len(unique_videos))
+
+# Split the videos into training and testing sets
+train_videos = unique_videos[:split_idx]
+test_videos = unique_videos[split_idx:]
+
+print(train_videos)
+print(test_videos)
+
+# Filter the dataset based on the sorted video split
+train_data = data["train"].filter(lambda x: x["video"] in train_videos)
+test_data = data["train"].filter(lambda x: x["video"] in test_videos)
 
 # Setup Wandb
 wandb.login(key='395ee0b4fb2e10004d480c7d2ffe03b236345ddc')

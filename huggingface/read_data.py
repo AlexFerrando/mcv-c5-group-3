@@ -44,6 +44,7 @@ def load_images_and_annotations_for_video(
     """
     target_classes = target_classes or [1, 2]  # Default to cars & pedestrians if not provided
     frames_info = defaultdict(lambda: {
+        "video": "",
         "image": "",
         "image_id": 0,
         "orig_size": [],
@@ -82,6 +83,7 @@ def load_images_and_annotations_for_video(
         bbox, area = decode_rle_mask(rle_mask, img_h, img_w)
 
         frame_data = frames_info[image_id]
+        frame_data["video"] = video_folder
         frame_data["image"] = img_path
         frame_data["image_id"] = image_id
         frame_data["orig_size"] = [img_h, img_w]
@@ -110,7 +112,7 @@ def load_video(video_name: str):
         raise FileNotFoundError(f"Annotation folder not found: {annotation_folder}")
 
     dataset = {
-        "image": [], "boxes": [], "track_id": [], "class_labels": [],
+        "video": [], "image": [], "boxes": [], "track_id": [], "class_labels": [],
         "frame_id": [], "orig_size": [], "area": [], "iscrowd": []
     }
 
@@ -118,6 +120,7 @@ def load_video(video_name: str):
     frame_to_mask = load_images_and_annotations_for_video(image_folder, annotation_folder)
 
     for frame_data in frame_to_mask.values():
+        dataset["video"].append(frame_data["video"])
         dataset["image"].append(frame_data["image"])
         dataset["boxes"].append(frame_data["boxes"])
         dataset["track_id"].append(frame_data["track_id"])
@@ -141,7 +144,7 @@ def load_images_and_annotations(image_folder: str, annotation_folder: str) -> Di
         raise FileNotFoundError(f"Annotation folder not found: {annotation_folder}")
 
     dataset = {
-        "image": [], "boxes": [], "track_id": [], "class_labels": [],
+        "video": [], "image": [], "boxes": [], "track_id": [], "class_labels": [],
         "image_id": [], "orig_size": [], "area": [],
     }
 
@@ -159,6 +162,7 @@ def load_images_and_annotations(image_folder: str, annotation_folder: str) -> Di
         frame_to_mask = load_images_and_annotations_for_video(seq_img_folder, seq_anno_file)
 
         for frame_data in frame_to_mask.values():
+            dataset["video"].append(frame_data["video"])
             dataset["image"].append(frame_data["image"])
             dataset["boxes"].append(frame_data["boxes"])
             dataset["track_id"].append(frame_data["track_id"])
@@ -184,6 +188,7 @@ def read_train_data(data_path: str) -> Dataset:
 def get_train_features() -> Features:
     """Define dataset features for Hugging Face `Dataset`."""
     return Features({
+        "video": Value("string"),
         "image": HFImage(),  # Image path, automatically converted to PIL
         "image_id": Value("int32"),
         "track_id": Sequence(Value("int32")),
