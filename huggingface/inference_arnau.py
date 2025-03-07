@@ -182,27 +182,33 @@ def save_predictions(predictions: List[Dict], video_name: str) -> None:
     with open(output_json_path, 'w') as f:
         json.dump(predictions, f, indent=4)
 
-
 if __name__ == '__main__':
-
-    #DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
     DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
+    #DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'    
     
-    # Get video names
-    videos = os.listdir(DATASET_PATH+'/training/image_02')
-
-    # Load model
+    videos = os.listdir(DATASET_PATH + '/training/image_02')
+    
     model, image_processor, device = load_model()
-    
+
+    # Iterar sobre los videos
     for video in tqdm(videos, desc="Processing videos", unit="video"):
         if video == '.DS_Store':
             continue
 
         dataset = load_video(video)
+        frames = dataset['image']
         
-        frames = dataset['image'][0:2]
-        
-        predictions = run_inference(model, image_processor, frames, device)
-        save_predictions(predictions, video_name = video)
+        # Dividir los frames en lotes de 10
+        batch_size = 10
+        all_predictions = []  # Aquí se almacenarán todas las predicciones para el video
+
+        # Añadir un tqdm para los lotes
+        for i in tqdm(range(0, len(frames), batch_size), desc=f"Processing batches for {video}", unit="batch"):
+            batch_frames = frames[i:i + batch_size]
+            predictions = run_inference(model, image_processor, batch_frames, device)
+            all_predictions.extend(predictions)  # Agregar las predicciones del lote actual
+
+        # Guardar todas las predicciones del video en un solo archivo
+        save_predictions(all_predictions, video_name=video)
 
     print("Inference for DeTR off-the-shelf finished!")
