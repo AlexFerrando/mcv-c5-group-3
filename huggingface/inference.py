@@ -26,9 +26,6 @@ def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False) -> T
 
     if modified:
         # Update the number of classes
-        print(model.config.num_labels)
-        print(model.config.id2label)
-        print(model.config.label2id)
         model.config.num_labels = 2
         model.config.id2label = {0: 'N/A', 1: 'pedestrian', 2: 'car'}
         model.config.label2id = {'N/A': 0, 'pedestrian': 1, 'car': 2}

@@ -1,11 +1,12 @@
 import torch
 import numpy as np
+import albumentations as A
 
 from typing import Dict, Optional
 from functools import partial
 from dataclasses import dataclass
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
-from transformers import EvalPrediction, AutoImageProcessor, TrainingArguments, Trainer
+from transformers import EvalPrediction, AutoImageProcessor, TrainingArguments, Trainer, TrainerCallback
 from torchvision.transforms import functional as F
 
 import torch
@@ -16,7 +17,8 @@ from read_data import read_data
 import consts
 from transformers.image_transforms import center_to_corners_format
 import wandb
-from transformers import TrainerCallback
+from finetuning_utils import augment_and_transform_batch
+
 
 class WandbCallback(TrainerCallback):
     def on_log(self, args, state, control, logs=None, **kwargs):
@@ -50,19 +52,12 @@ def convert_bbox_yolo_to_pascal(boxes, image_size):
 # Define data collator
 def collate_fn(batch):
     data = {}
-    data["pixel_values"] = torch.stack([F.to_tensor(sample["image"]) for sample in batch])
-    data["labels"] = [{
-        "boxes": torch.tensor(sample["boxes"], dtype=torch.float32),
-        "class_labels": torch.tensor(sample["class_labels"], dtype=torch.int64),
-        "area": torch.tensor(sample["area"], dtype=torch.float32),
-        "iscrowd": torch.tensor(sample["iscrowd"], dtype=torch.int64),
-        "orig_size": torch.tensor(sample["orig_size"], dtype=torch.int32)
-    } for sample in batch]
-    
+    data["pixel_values"] = torch.stack([x["pixel_values"] for x in batch])
+    data["labels"] = [x["labels"] for x in batch]
     if "pixel_mask" in batch[0]:
-        data["pixel_mask"] = torch.stack([sample["pixel_mask"] for sample in batch])
-    
+        data["pixel_mask"] = torch.stack([x["pixel_mask"] for x in batch])
     return data
+
 
 @dataclass
 class ModelOutput:
@@ -113,7 +108,7 @@ def compute_metrics(
         metrics[f"mar_100_{class_name}"] = class_mar
 
     metrics = {k: round(v.item(), 4) for k, v in metrics.items()}
-    wandb.log(metrics)
+    # wandb.log(metrics)
     return metrics
 
 # Load model and image processor
@@ -129,8 +124,9 @@ training_args = TrainingArguments(
     output_dir="./outputs/alex/detr_finetuned",
     num_train_epochs=30,
     fp16=False,
-    per_device_train_batch_size=8,
-    dataloader_num_workers=8, # Change to 0 locally
+    per_device_train_batch_size=1, # Change to 1 locally
+    per_device_eval_batch_size=1, # Change to 1 locally
+    dataloader_num_workers=0, # Change to 0 locally
     learning_rate=5e-5,
     lr_scheduler_type="cosine",
     weight_decay=1e-4,
@@ -148,6 +144,24 @@ training_args = TrainingArguments(
 
 # Load dataset
 data = read_data(consts.KITTI_MOTS_PATH)
+
+# Clean and transform data
+train_augment_and_transform = A.Compose(
+    [
+        A.Perspective(p=0.1),
+        A.HorizontalFlip(p=0.5),
+        A.RandomBrightnessContrast(p=0.5),
+        A.HueSaturationValue(p=0.1),
+    ],
+    [A.NoOp()],
+    bbox_params=A.BboxParams(format="coco", label_fields=["category"], clip=True, min_area=25),
+)
+
+train_transform_batch = partial(
+    augment_and_transform_batch, transform=train_augment_and_transform, image_processor=image_processor
+)
+
+data["train"] = data["train"].with_transform(train_transform_batch)
 train_data = data["train"].train_test_split(test_size=0.2)
 
 # Setup Wandb
