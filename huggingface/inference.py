@@ -1,14 +1,17 @@
 import consts
 import torch
 import torch.nn as nn
+import os
 
 from consts import DetectionResults
 from PIL import Image, ImageDraw
 from transformers import AutoImageProcessor, AutoModelForObjectDetection, DetrForObjectDetection
 from typing import List, Tuple, Optional, Union, Dict
-from read_data import read_data
+from read_data import read_data, load_video
 from consts import inverse_mapping_class_id
 import json
+from tqdm import tqdm
+
 
 def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False) -> Tuple[torch.nn.Module, AutoImageProcessor, torch.device]:
     """
@@ -196,20 +199,42 @@ def coco_reformat(results: List[Dict], img_size: Tuple[int, int]) -> List[Dict]:
     return coco_predictions
 
 
+def save_predictions(predictions: List[Dict], video_name: str) -> None:
+    
+    # Definir la ruta de salida
+    
+    output_folder = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/huggingface/evaluation_results/off-the-shelf/predictions'
+    os.makedirs(output_folder, exist_ok=True)  # Crea la carpeta si no existe
+
+    # Definir la ruta del archivo
+    output_json_path = f'{output_folder}/preds_coco_{video_name}.json'
+
+    # Guardar el JSON
+    with open(output_json_path, 'w') as f:
+        json.dump(predictions, f, indent=4)
+
+
 if __name__ == '__main__':
 
     DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
+    
+    # Get video names
+    videos = os.listdir(DATASET_PATH+'/training/image_02')
 
     # Load model
     model, image_processor, device = load_model()
     
-    # Load dataset
-    dataset = read_data(DATASET_PATH)
-    dataset = dataset['train']['image']
-    
-    results = run_inference(model, image_processor, dataset, device)
+    for video in tqdm(videos, desc="Processing videos", unit="video"):
+        
+        try:
+            dataset = load_video(video)
+        except:
+            continue
+        
+        frames = dataset['image']
+        
+        predictions = run_inference(model, image_processor, frames, device)
+        save_predictions(predictions, video_name = video)
 
-    # Save the gt_coco as a JSON file
-    output_json_path = 'results_coco_0000.json'
-    with open(output_json_path, 'w') as f:
-        json.dump(results, f, indent=4)
+    print("Inference for DeTR off-the-shelf finished!")
+

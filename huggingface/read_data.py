@@ -91,6 +91,44 @@ def load_images_and_annotations_for_video(
         frame_data["area"].append(area)
 
     return dict(frames_info)
+
+
+
+
+def load_video(video_name: str):
+    """Load image paths and corresponding annotation masks."""
+
+    DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
+
+    image_folder = DATASET_PATH+f'/training/image_02/{video_name}'
+    annotation_folder = DATASET_PATH+f'/instances_txt/{video_name}.txt'
+
+    if not os.path.exists(image_folder):
+        raise FileNotFoundError(f"Image folder not found: {image_folder}")
+    if not os.path.exists(annotation_folder):
+        raise FileNotFoundError(f"Annotation folder not found: {annotation_folder}")
+
+    dataset = {
+        "image": [], "boxes": [], "track_id": [], "class_labels": [],
+        "frame_id": [], "orig_size": [], "area": [], "iscrowd": []
+    }
+
+
+    frame_to_mask = load_images_and_annotations_for_video(image_folder, annotation_folder)
+
+    for frame_data in frame_to_mask.values():
+        dataset["image"].append(frame_data["image"])
+        dataset["boxes"].append(frame_data["boxes"])
+        dataset["track_id"].append(frame_data["track_id"])
+        dataset["class_labels"].append(frame_data["class_labels"])
+        dataset["frame_id"].append(frame_data["frame_id"])
+        dataset["orig_size"].append(frame_data["orig_size"])
+        dataset["area"].append(frame_data["area"])
+        dataset["iscrowd"].append(frame_data["iscrowd"])
+
+    video = Dataset.from_dict(dataset, features=get_train_features())
+
+    return video
         
 
 def load_images_and_annotations(image_folder: str, annotation_folder: str) -> Dict[str, List]:
