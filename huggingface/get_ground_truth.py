@@ -31,8 +31,8 @@ def load_images_and_annotations_for_video(video_folder: str, annotation_file: st
         rle_mask = " ".join(parts[5:])
 
         # Skip annotations for classes we're not interested in
-        # if class_id not in target_classes:
-        #     continue
+        if class_id not in target_classes:
+            continue
             
         img_path = os.path.join(video_folder, f"{frame_id:06d}.png")
         if not os.path.exists(img_path):
@@ -114,7 +114,7 @@ if __name__ == '__main__':
     gt_coco = load_images_and_annotations_for_video(video0000_folder, annotations_folder)
     
     # Save the gt_coco as a JSON file
-    output_json_path = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS/gt_coco_0000.json'
+    output_json_path = 'gt_coco_0000.json'
     with open(output_json_path, 'w') as f:
         json.dump(gt_coco, f, indent=4)
     print(f"Ground truth COCO annotations saved to: {output_json_path}")
