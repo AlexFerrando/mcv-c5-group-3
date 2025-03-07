@@ -203,7 +203,9 @@ def save_predictions(predictions: List[Dict], video_name: str) -> None:
     
     # Definir la ruta de salida
     
-    output_folder = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/huggingface/evaluation_results/off-the-shelf/predictions'
+    #output_folder = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/huggingface/evaluation_results/off-the-shelf/predictions'
+    output_folder = '/ghome/c5mcv03/mcv-c5-group-3/detectron2/evaluation/DeTR/off-the-shelf'
+    
     os.makedirs(output_folder, exist_ok=True)  # Crea la carpeta si no existe
 
     # Definir la ruta del archivo
@@ -216,8 +218,9 @@ def save_predictions(predictions: List[Dict], video_name: str) -> None:
 
 if __name__ == '__main__':
 
-    DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
-    
+    #DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
+    DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
+
     # Get video names
     videos = os.listdir(DATASET_PATH+'/training/image_02')
 

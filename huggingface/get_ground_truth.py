@@ -38,9 +38,9 @@ def load_images_and_annotations_for_video(video_name: str, target_classes: List[
         if class_id not in target_classes:
             continue
             
-        img_path = os.path.join(video_folder, f"{frame_id:06d}.png")
-        if not os.path.exists(img_path):
-            continue  # Skip missing images
+        # img_path = os.path.join(video_folder, f"{frame_id:06d}.png")
+        # if not os.path.exists(img_path):
+        #     continue  # Skip missing images
 
         # Decode RLE mask
         rle = {'size': [h, w], 'counts': rle_mask.encode('utf-8')}
@@ -52,7 +52,7 @@ def load_images_and_annotations_for_video(video_name: str, target_classes: List[
         # Create or update the image entry
         if frame_id not in frame_to_mask:
             frame_to_mask[frame_id] = {
-                "image": img_path,
+                #"image": img_path,
                 "frame_id": frame_id,
                 "track_id": [],
                 "class_id": [],
@@ -103,7 +103,7 @@ def load_images_and_annotations_for_video(video_name: str, target_classes: List[
     for frame_id, frame_data in frame_to_mask.items():
         coco_format['images'].append({
             'id': frame_data['image_id'],
-            'file_name': frame_data['image'],
+            #'file_name': frame_data['image'],
             'width': w,  # Width from the RLE
             'height': h,  # Height from the RLE
         })
@@ -130,9 +130,11 @@ if __name__ == '__main__':
     DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
 
     # Get video names
-    videos = os.listdir(DATASET_PATH+'/training/image_02')[1:]
-            
-    for video_name in videos:
+    files = os.listdir(DATASET_PATH+'/instances_txt')
+    video_names = [filename.split('.')[0] for filename in files]
+
+    # Reand and save the GT in COCO format
+    for video_name in video_names:
         gt_coco = load_images_and_annotations_for_video(video_name)
         
         save_GroundTruth(gt_coco, video_name)

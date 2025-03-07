@@ -98,7 +98,8 @@ def load_images_and_annotations_for_video(
 def load_video(video_name: str):
     """Load image paths and corresponding annotation masks."""
 
-    DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
+    #DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
+    DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
 
     image_folder = DATASET_PATH+f'/training/image_02/{video_name}'
     annotation_folder = DATASET_PATH+f'/instances_txt/{video_name}.txt'
