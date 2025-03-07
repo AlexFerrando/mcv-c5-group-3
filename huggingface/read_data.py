@@ -113,7 +113,7 @@ def load_video(video_name: str):
 
     dataset = {
         "video": [], "image": [], "boxes": [], "track_id": [], "class_labels": [],
-        "frame_id": [], "orig_size": [], "area": [], "iscrowd": []
+        "image_id": [], "orig_size": [], "area": [], "iscrowd": []
     }
 
 
@@ -125,7 +125,7 @@ def load_video(video_name: str):
         dataset["boxes"].append(frame_data["boxes"])
         dataset["track_id"].append(frame_data["track_id"])
         dataset["class_labels"].append(frame_data["class_labels"])
-        dataset["frame_id"].append(frame_data["frame_id"])
+        dataset["image_id"].append(frame_data["image_id"])
         dataset["orig_size"].append(frame_data["orig_size"])
         dataset["area"].append(frame_data["area"])
         dataset["iscrowd"].append(frame_data["iscrowd"])
