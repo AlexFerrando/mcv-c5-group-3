@@ -1,14 +1,15 @@
 import consts
 import torch
+import torch.nn as nn
 
 from consts import DetectionResults
 from PIL import Image, ImageDraw
-from transformers import AutoImageProcessor, AutoModelForObjectDetection
+from transformers import AutoImageProcessor, AutoModelForObjectDetection, DetrForObjectDetection
 from typing import List, Tuple, Optional, Union, Dict
 from read_data import read_data
 
 
-def load_model(model_name: str = consts.MODEL_NAME) -> Tuple[torch.nn.Module, AutoImageProcessor, torch.device]:
+def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False) -> Tuple[torch.nn.Module, AutoImageProcessor, torch.device]:
     """
     Load model, processor, and determine device.
     
@@ -20,7 +21,36 @@ def load_model(model_name: str = consts.MODEL_NAME) -> Tuple[torch.nn.Module, Au
     """
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     image_processor = AutoImageProcessor.from_pretrained(model_name)
-    model = AutoModelForObjectDetection.from_pretrained(model_name)
+    model: DetrForObjectDetection = AutoModelForObjectDetection.from_pretrained(model_name)
+
+    if modified:
+        # Update the number of classes
+        print(model.config.num_labels)
+        print(model.config.id2label)
+        print(model.config.label2id)
+        model.config.num_labels = 2
+        model.config.id2label = {0: 'N/A', 1: 'pedestrian', 2: 'car'}
+        model.config.label2id = {'N/A': 0, 'pedestrian': 1, 'car': 2}
+
+        # Get original classifier weights
+        old_weight = model.class_labels_classifier.weight.data
+        old_bias = model.class_labels_classifier.bias.data
+
+        input_dim = old_weight.shape[1]
+
+        # Select only the weights and biases of the desired classes
+        new_weight = old_weight[[0, 3, 1, -1]].clone()
+        new_bias = old_bias[[0, 3, 1, -1]].clone()
+
+        # Create a new classifier layer with the correct shape
+        new_classifier = nn.Linear(input_dim, 4)  # 4 classes (N/A, pedestrian, car and wtf)
+
+        # Assign new weights and biases properly
+        new_classifier.weight = nn.Parameter(new_weight)
+        new_classifier.bias = nn.Parameter(new_bias)
+
+        # Replace the classifier in the model
+        model.class_labels_classifier = new_classifier
 
     model.to(device)
     

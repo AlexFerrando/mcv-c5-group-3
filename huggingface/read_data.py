@@ -3,7 +3,6 @@ import os
 from typing import List, Dict, Optional
 from datasets import Dataset, DatasetDict, Features, Image as HFImage, Value, Sequence
 from pycocotools.mask import toBbox
-from consts import KIITI_TO_COCO_IDS
 
 def load_video_frames(folder: str) -> List[str]:
     """Load sorted image paths from a video sequence folder."""
@@ -21,10 +20,22 @@ def load_video_frames(folder: str) -> List[str]:
 
 
 def decode_rle_mask(rle_mask: str, img_h: int, img_w: int):
-    """Decode RLE mask into a bounding box."""
+    """Decode RLE mask into a bounding box (xcenter, ycenter, w, h)."""
     rle = {'size': [img_h, img_w], 'counts': rle_mask.encode('utf-8')}
-    x1, y1, h, w = tuple(toBbox(rle))  # Ensure `toBbox` is properly imported
-    return [x1 / img_w, y1 / img_h, (x1 + w) / img_w, (y1 + h) / img_h], h / img_h * w / img_w
+    x1, y1, w, h = tuple(toBbox(rle))  # Ensure `toBbox` is properly imported
+
+    # Compute area before normalizing
+    area = h * w
+    # Compute center coordinates
+    x_center = (x1 + w / 2) / img_w
+    y_center = (y1 + h / 2) / img_h
+
+    # Normalize width and height
+    w /= img_w
+    h /= img_h
+
+    return [x_center, y_center, w, h], area
+
 
 def load_images_and_annotations_for_video(
     video_folder: str, 
@@ -78,8 +89,6 @@ def load_images_and_annotations_for_video(
 
         if category_id not in target_classes:
             continue
-
-        category_id = KIITI_TO_COCO_IDS[category_id]
 
         img_path = os.path.join(video_folder, f"{frame_id:06d}.png")
         bbox, area = decode_rle_mask(rle_mask, img_h, img_w)
