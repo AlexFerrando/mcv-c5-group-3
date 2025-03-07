@@ -108,7 +108,8 @@ def compute_metrics(
         metrics[f"mar_100_{class_name}"] = class_mar
 
     metrics = {k: round(v.item(), 4) for k, v in metrics.items()}
-    # wandb.log(metrics)
+    print(metrics)
+    wandb.log(metrics)
     return metrics
 
 # Load model and image processor
@@ -122,7 +123,7 @@ eval_compute_metrics_fn = partial(
 # Define training arguments
 training_args = TrainingArguments(
     output_dir="./outputs/alex/detr_finetuned",
-    num_train_epochs=5,
+    num_train_epochs=20,
     fp16=False,
     per_device_train_batch_size=4, # Change to 1 locally
     per_device_eval_batch_size=4, # Change to 1 locally
@@ -180,7 +181,7 @@ test_data = test_data.with_transform(partial(augment_and_transform_batch, image_
 wandb.login(key='395ee0b4fb2e10004d480c7d2ffe03b236345ddc')
 wandb.init(
     project="c6-week1",
-    name="detr_finetuning_test",
+    name="detr_finetuning_20epochs",
     config=training_args.to_dict()  # Log training arguments
 )
 
