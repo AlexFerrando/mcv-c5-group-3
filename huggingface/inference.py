@@ -28,7 +28,8 @@ def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False) -> T
         print('Using GPU:', torch.cuda.get_device_name())
     else:
         # Comentar aquesta linia per executar en local sense gpu i posar pass
-        raise Exception('No GPU available')
+        #raise Exception('No GPU available')
+        pass
     image_processor = AutoImageProcessor.from_pretrained(model_name)
     model: DetrForObjectDetection = AutoModelForObjectDetection.from_pretrained(model_name)
 
@@ -218,8 +219,8 @@ def save_predictions(predictions: List[Dict], video_name: str) -> None:
 
 if __name__ == '__main__':
 
-    #DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
-    DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
+    DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
+    #DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
 
     # Get video names
     videos = os.listdir(DATASET_PATH+'/training/image_02')
@@ -228,13 +229,12 @@ if __name__ == '__main__':
     model, image_processor, device = load_model()
     
     for video in tqdm(videos, desc="Processing videos", unit="video"):
-        
-        try:
-            dataset = load_video(video)
-        except:
+        if video == '.DS_Store':
             continue
         
-        frames = dataset['image']
+        dataset = load_video(video)
+        
+        frames = dataset['image'][0:5]
         
         predictions = run_inference(model, image_processor, frames, device)
         save_predictions(predictions, video_name = video)

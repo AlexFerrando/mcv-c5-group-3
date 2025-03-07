@@ -6,7 +6,7 @@ from consts import DetectionResults
 from PIL import Image, ImageDraw
 from transformers import AutoImageProcessor, AutoModelForObjectDetection
 from typing import List, Tuple, Optional, Union, Dict
-from read_data import read_data, load_video
+from read_data_arnau import read_data, load_video
 from consts import inverse_mapping_class_id
 import json
 from tqdm import tqdm
@@ -170,7 +170,9 @@ def save_predictions(predictions: List[Dict], video_name: str) -> None:
     
     # Definir la ruta de salida
     
-    output_folder = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/huggingface/evaluation_results/off-the-shelf/predictions'
+    #output_folder = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/huggingface/evaluation_results/off-the-shelf/predictions'
+    output_folder = '/ghome/c5mcv03/mcv-c5-group-3/detectron2/evaluation/DeTR/off-the-shelf'
+
     os.makedirs(output_folder, exist_ok=True)  # Crea la carpeta si no existe
 
     # Definir la ruta del archivo
@@ -183,8 +185,8 @@ def save_predictions(predictions: List[Dict], video_name: str) -> None:
 
 if __name__ == '__main__':
 
-    DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
-    #DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
+    #DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
+    DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
     
     # Get video names
     videos = os.listdir(DATASET_PATH+'/training/image_02')
@@ -195,7 +197,7 @@ if __name__ == '__main__':
     for video in tqdm(videos, desc="Processing videos", unit="video"):
         if video == '.DS_Store':
             continue
-        
+
         dataset = load_video(video)
         
         frames = dataset['image'][0:2]

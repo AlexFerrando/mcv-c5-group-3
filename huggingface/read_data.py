@@ -51,6 +51,7 @@ def load_images_and_annotations_for_video(
         "track_id": [],
         "class_labels": [],
         "boxes": [],
+        "iscrowd": [],
     })
 
     if not os.path.exists(annotation_file):
@@ -89,17 +90,16 @@ def load_images_and_annotations_for_video(
         frame_data["class_labels"].append(category_id)
         frame_data["boxes"].append(bbox)
         frame_data["area"].append(area)
+        frame_data["iscrowd"] = 0
 
     return dict(frames_info)
-
-
 
 
 def load_video(video_name: str):
     """Load image paths and corresponding annotation masks."""
 
-    #DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
-    DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
+    DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
+    #DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
 
     image_folder = DATASET_PATH+f'/training/image_02/{video_name}'
     annotation_folder = DATASET_PATH+f'/instances_txt/{video_name}.txt'
@@ -122,7 +122,7 @@ def load_video(video_name: str):
         dataset["boxes"].append(frame_data["boxes"])
         dataset["track_id"].append(frame_data["track_id"])
         dataset["class_labels"].append(frame_data["class_labels"])
-        dataset["frame_id"].append(frame_data["frame_id"])
+        dataset["frame_id"].append(frame_data["image_id"])
         dataset["orig_size"].append(frame_data["orig_size"])
         dataset["area"].append(frame_data["area"])
         dataset["iscrowd"].append(frame_data["iscrowd"])
@@ -185,12 +185,13 @@ def get_train_features() -> Features:
     """Define dataset features for Hugging Face `Dataset`."""
     return Features({
         "image": HFImage(),  # Image path, automatically converted to PIL
-        "image_id": Value("int32"),
+        "frame_id": Value("int32"),
         "track_id": Sequence(Value("int32")),
         "class_labels": Sequence(Value("int32")),
         "boxes": Sequence(Sequence(Value("float32"))),  # List of bounding boxes
         "orig_size": Sequence(Value("int32")),  # Alternative: Array(2, "int32")
         "area": Sequence(Value("float32")),  # Consistency with bbox
+        "iscrowd": Sequence(Value("int32")),
     })
 
 def read_data(data_path: str) -> DatasetDict:
