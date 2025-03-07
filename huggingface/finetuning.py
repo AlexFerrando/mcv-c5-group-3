@@ -124,9 +124,9 @@ training_args = TrainingArguments(
     output_dir="./outputs/alex/detr_finetuned",
     num_train_epochs=30,
     fp16=False,
-    per_device_train_batch_size=1, # Change to 1 locally
-    per_device_eval_batch_size=1, # Change to 1 locally
-    dataloader_num_workers=0, # Change to 0 locally
+    per_device_train_batch_size=16, # Change to 1 locally
+    per_device_eval_batch_size=16, # Change to 1 locally
+    dataloader_num_workers=8, # Change to 0 locally
     learning_rate=5e-5,
     lr_scheduler_type="cosine",
     weight_decay=1e-4,
@@ -143,16 +143,16 @@ training_args = TrainingArguments(
 )
 
 # Load dataset
-data = read_data(consts.KITTI_MOTS_PATH)
+data = read_data(consts.KITTI_MOTS_PATH_ALEX)
 
 # Clean and transform data
 train_augment_and_transform = A.Compose(
-    [
-        A.Perspective(p=0.1),
-        A.HorizontalFlip(p=0.5),
-        A.RandomBrightnessContrast(p=0.5),
-        A.HueSaturationValue(p=0.1),
-    ],
+    # [
+    #     A.Perspective(p=0.1),
+    #     A.HorizontalFlip(p=0.5),
+    #     A.RandomBrightnessContrast(p=0.5),
+    #     A.HueSaturationValue(p=0.1),
+    # ],
     [A.NoOp()],
     bbox_params=A.BboxParams(format="coco", label_fields=["category"], clip=True, min_area=25),
 )
