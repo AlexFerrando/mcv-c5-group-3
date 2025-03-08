@@ -14,7 +14,7 @@ if __name__ == "__main__":
     parser.add_argument("--split_val", type=bool, help="Evaluate the validation set", default=True)
     args = parser.parse_args()
 
-    wandb.login("8410a2da3f323633210ca8d25ce6862368d9f489")
+    wandb.login(key = "8410a2da3f323633210ca8d25ce6862368d9f489")
     model = YOLO(args.model_path)
     results = model.val(data=os.path.join(consts.PATH_KITTI_MOTS_YOLO, "kitti_mots_config.yaml"),
                         classes=consts.YOLO_CLASSES, cache=False, project=args.output_path)
