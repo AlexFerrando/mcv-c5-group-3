@@ -1,4 +1,4 @@
-from ultralytics_ import consts
+import consts
 
 from ultralytics import YOLO
 import os

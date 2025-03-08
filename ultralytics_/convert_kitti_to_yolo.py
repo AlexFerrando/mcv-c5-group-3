@@ -1,8 +1,8 @@
-from ultralytics_ import consts
-
 import os
 from pycocotools.mask import toBbox
 import shutil
+
+import consts
 
 def extract_yolo_annotations(ann_filepath):
     print(f"Processing: {ann_filepath}")

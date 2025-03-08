@@ -3,7 +3,7 @@ import argparse
 
 from ultralytics import YOLO
 
-from ultralytics_ import consts
+import consts
 
 
 if __name__ == "__main__":
