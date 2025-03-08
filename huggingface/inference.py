@@ -24,11 +24,7 @@ def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False, for_
         Tuple containing model, image processor, and device
     """
     model: DetrForObjectDetection = AutoModelForObjectDetection.from_pretrained(model_name)
-    if device == torch.device('cuda'):
-        print('Using GPU:', torch.cuda.get_device_name())
-    else:
-        # Comentar aquesta linia per executar en local sense gpu i posar pass
-        raise Exception('No GPU available')
+
     if for_dataset == 'KITTI':
         max_height, max_width = consts.MAX_HEIGHT_SIZE_KITTI, consts.MAX_WIDTH_SIZE_KITTI
         if modified:
