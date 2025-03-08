@@ -28,7 +28,6 @@ if __name__ == "__main__":
         scale=0.25,
         fliplr=0.0,
         erasing=0.4,
-        erasing=0.0,
         crop_fraction=0.9,
         # auto_augment='autoaugment'
         patience=10,
