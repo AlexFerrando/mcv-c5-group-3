@@ -169,8 +169,8 @@ if DATASET == 'KITTI':
 elif DATASET == 'DEART':
     data = load_dataset('davanstrien/deart')
     # Remove very large images (heigh or width > 2000)
-    data['train'] = data['train'].filter(lambda x: x['width'] <= 2000 and x['height'] <= 2000)
-    data['test'] = data['test'].filter(lambda x: x['width'] <= 2000 and x['height'] <= 2000)
+    data['train'] = data['train'].filter(lambda x: x['width'] <= 2000 and x['height'] <= 2000, num_proc=4)
+    data = data.train_test_split(test_size=0.2)
     train_data = data['train']
     test_data = data['test']
 
