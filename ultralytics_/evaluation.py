@@ -9,8 +9,8 @@ import consts
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate YOLO model")
     parser.add_argument("--model_path", type=str, help="Path to the YOLO model")
-    parser.add_argument("--output_path", type=str, help="Path to save the results", default="/projects/master/c5/outputs/results")
-    parser.add_argument("--split_val", type=bool, help="Split the validation set", default=True)
+    parser.add_argument("--output_path", type=str, help="Path to save the results", default="/ghome/c5mcv03/mcv-c5-group-3/outputs/pol/job_outputs")
+    parser.add_argument("--split_val", type=bool, help="Evaluate the validation set", default=True)
     args = parser.parse_args()
 
     model = YOLO(args.model_path)
