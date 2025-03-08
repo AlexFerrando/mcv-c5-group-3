@@ -76,7 +76,6 @@ def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False, for_
         size={"max_height": max_height, "max_width": max_width},
         do_pad=True,
         pad_size={"height": max_height, "width": max_width},
-        use_fast=True
     )
 
     model.to(device)
