@@ -9,8 +9,10 @@ KITTI_MOTS_PATH_RELATIVE = 'KITTI_MOTS/'
 
 # Model info
 MODEL_NAME = "facebook/detr-resnet-50"
-MAX_WIDTH_SIZE = 1242
-MAX_HEIGHT_SIZE = 376
+MAX_WIDTH_SIZE_KITTI = 1242
+MAX_HEIGHT_SIZE_KITTI = 376
+MAX_WIDTH_SIZE_DEART = 2000
+MAX_HEIGHT_SIZE_DEART = 2000
 
 # Classes mapping
 def inverse_mapping_class_id(dataset: str=None, class_id: int=None):
