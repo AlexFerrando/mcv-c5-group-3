@@ -61,11 +61,11 @@ def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False, for_
         max_height, max_width = consts.MAX_HEIGHT_SIZE_DEART, consts.MAX_WIDTH_SIZE_DEART
         
         # Update the number of classes
-        model.config.num_labels = 2
-        model.config.id2label = {0: 'N/A', 1: 'car', 2: 'pedestrian'}
-        model.config.label2id = {'N/A': 0, 'car': 1, 'pedestrian': 2}
+        model.config.num_labels = 70
+        model.config.id2label = {i: str(i) for i in range(70)}
+        model.config.label2id = {str(i): i for i in range(70)}
 
-        new_classifier = nn.Linear(256, 3)  # 3 classes (N/A, pedestrian, car)
+        new_classifier = nn.Linear(256, 71)  # 3 classes (N/A, pedestrian, car)
         model.class_labels_classifier = new_classifier
     else:
         raise ValueError(f"Unknown dataset: {for_dataset}")
