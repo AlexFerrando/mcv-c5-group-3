@@ -115,7 +115,7 @@ def compute_metrics(
 
 
 # Load dataset
-DATASET = 'KITTI'
+DATASET = 'DEART'
 
 # Load model and image processor
 model, image_processor, device = load_model(modified=True, for_dataset=DATASET)
@@ -152,7 +152,7 @@ training_args = TrainingArguments(
 )
 
 if DATASET == 'KITTI':
-    data = read_data(consts.KITTI_MOTS_PATH_ALEX)
+    data = read_data(consts.KITTI_MOTS_PATH)
     unique_videos = sorted(data["train"].unique("video"))
     # Filter the dataset based on the sorted video split
     # Determine the split index (80% for training, 20% for testing)
@@ -170,7 +170,7 @@ elif DATASET == 'DEART':
     data = load_dataset('davanstrien/deart')
     # Remove very large images (heigh or width > 2000)
     data['train'] = data['train'].filter(lambda x: x['width'] <= 2000 and x['height'] <= 2000, num_proc=4)
-    data = data.train_test_split(test_size=0.2)
+    data = data['train'].train_test_split(test_size=0.2)
     train_data = data['train']
     test_data = data['test']
 
