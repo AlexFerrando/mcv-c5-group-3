@@ -230,6 +230,8 @@ trainer = Trainer(
 )
 trainer.add_callback(WandbCallback())
 
+print(torch.cuda.memory_summary())
+
 # Start training
 trainer.train()
 wandb.finish()

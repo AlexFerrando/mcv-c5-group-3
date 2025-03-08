@@ -23,7 +23,6 @@ def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False, for_
     Returns:
         Tuple containing model, image processor, and device
     """
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model: DetrForObjectDetection = AutoModelForObjectDetection.from_pretrained(model_name)
     if device == torch.device('cuda'):
         print('Using GPU:', torch.cuda.get_device_name())
@@ -77,8 +76,6 @@ def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False, for_
         do_pad=True,
         pad_size={"height": max_height, "width": max_width},
     )
-
-    model.to(device)
     
     return model, image_processor, device
 
