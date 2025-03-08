@@ -12,12 +12,13 @@ from torchvision.transforms import functional as F
 import torch
 import torchvision.transforms.functional as F
 
+from datasets import load_dataset
 from inference import load_model
 from read_data import read_data
 import consts
 from transformers.image_transforms import center_to_corners_format
 import wandb
-from finetuning_utils import augment_and_transform_batch
+from finetuning_utils import augment_and_transform_batch, augment_and_transform_batch_deart
 
 
 class WandbCallback(TrainerCallback):
@@ -112,8 +113,12 @@ def compute_metrics(
     wandb.log(metrics)
     return metrics
 
+
+# Load dataset
+DATASET = 'DEART'
+
 # Load model and image processor
-model, image_processor, device = load_model(modified=True)
+model, image_processor = load_model(modified=True, for_dataset=DATASET)
 
 # Define evaluation function
 eval_compute_metrics_fn = partial(
@@ -123,10 +128,10 @@ eval_compute_metrics_fn = partial(
 # Define training arguments
 training_args = TrainingArguments(
     output_dir="./outputs/alex/detr_finetuned",
-    num_train_epochs=20,
+    num_train_epochs=10,
     fp16=False,
-    per_device_train_batch_size=4, # Change to 1 locally
-    per_device_eval_batch_size=4, # Change to 1 locally
+    per_device_train_batch_size=8, # Change to 1 locally
+    per_device_eval_batch_size=8, # Change to 1 locally
     dataloader_num_workers=4, # Change to 0 locally
     learning_rate=5e-5,
     lr_scheduler_type="cosine",
@@ -143,45 +148,73 @@ training_args = TrainingArguments(
     eval_do_concat_batches=False,
     push_to_hub=False,
     logging_dir="./outputs/alex/logs",
-    logging_steps=10,
+    logging_steps=25,
 )
 
-# Load dataset
-data = read_data(consts.KITTI_MOTS_PATH)
+if DATASET == 'KITTI':
+    data = read_data(consts.KITTI_MOTS_PATH)
+    unique_videos = sorted(data["train"].unique("video"))
+    # Filter the dataset based on the sorted video split
+    # Determine the split index (80% for training, 20% for testing)
+    split_idx = int(0.8 * len(unique_videos))
+    # Split the videos into training and testing sets
+    train_videos = set(unique_videos[:split_idx])
+    test_videos = set(unique_videos[split_idx:])
+    train_data = data["train"].filter(lambda x: x["video"] in train_videos, num_proc=4)
+    test_data = data["train"].filter(lambda x: x["video"] in test_videos, num_proc=4)
+    # data = data["train"].train_test_split(test_size=0.2)
+    # train_data = data["train"]
+    # test_data = data["test"]
 
-# Clean and transform data
-train_augment_and_transform = A.Compose(
-    [
-        A.Perspective(p=0.1),
-        A.HorizontalFlip(p=0.5),
-        A.RandomBrightnessContrast(p=0.5),
-        A.HueSaturationValue(p=0.1),
-    ],
-    bbox_params=A.BboxParams(format="coco", label_fields=["category"], clip=True, min_area=25),
-)
+elif DATASET == 'DEART':
+    data = load_dataset('davanstrien/deart')
+    # Remove very large images (heigh or width > 2000)
+    data['train'] = data['train'].filter(lambda x: x['width'] <= 2000 and x['height'] <= 2000, num_proc=4)
+    data = data['train'].train_test_split(test_size=0.2)
+    train_data = data['train']
+    test_data = data['test']
 
-train_transform_batch = partial(
-    augment_and_transform_batch, transform=train_augment_and_transform, image_processor=image_processor
-)
 
-unique_videos = sorted(data["train"].unique("video"))
-# Filter the dataset based on the sorted video split
-# Determine the split index (80% for training, 20% for testing)
-split_idx = int(0.8 * len(unique_videos))
-# Split the videos into training and testing sets
-train_videos = set(unique_videos[:split_idx])
-test_videos = set(unique_videos[split_idx:])
-train_data = data["train"].filter(lambda x: x["video"] in train_videos, num_proc=4)
-test_data = data["train"].filter(lambda x: x["video"] in test_videos, num_proc=4)
+if DATASET == 'KITTI':
+    # Clean and transform data
+    train_augment_and_transform = A.Compose(
+        [
+            A.Perspective(p=0.1),
+            A.HorizontalFlip(p=0.5),
+            A.RandomBrightnessContrast(p=0.5),
+            A.HueSaturationValue(p=0.1),
+        ],
+        bbox_params=A.BboxParams(format="coco", label_fields=["category"], clip=True, min_area=25),
+    )
+
+    test_augment_and_transform = A.Compose(
+        [A.NoOp()],
+        bbox_params=A.BboxParams(format="coco", label_fields=["category"], clip=True, min_area=25),
+    )
+    train_transform_batch = partial(
+        augment_and_transform_batch, transform=train_augment_and_transform, image_processor=image_processor
+    )
+
+    test_transform_batch = partial(
+        augment_and_transform_batch, transform=test_augment_and_transform, image_processor=image_processor
+    )
+elif DATASET == 'DEART':
+    train_transform_batch = partial(
+        augment_and_transform_batch_deart, image_processor=image_processor
+    )
+
+    test_transform_batch = partial(
+        augment_and_transform_batch_deart, image_processor=image_processor
+    )
 
 train_data = train_data.with_transform(train_transform_batch)
-test_data = test_data.with_transform(partial(augment_and_transform_batch, image_processor=image_processor))
+test_data = test_data.with_transform(test_transform_batch)
 
 # Setup Wandb
 wandb.login(key='395ee0b4fb2e10004d480c7d2ffe03b236345ddc')
 wandb.init(
     project="c6-week1",
-    name="detr_finetuning_20epochs",
+    name="detr_finetuning_20epochs_DEART",
     config=training_args.to_dict()  # Log training arguments
 )
 
@@ -196,6 +229,8 @@ trainer = Trainer(
     compute_metrics=eval_compute_metrics_fn,
 )
 trainer.add_callback(WandbCallback())
+
+print(torch.cuda.memory_summary())
 
 # Start training
 trainer.train()

@@ -2,10 +2,7 @@ import os
 from pycocotools.mask import toBbox
 import shutil
 
-KITTI2COCO = {
-    1: 2, # Car
-    2: 0, # Pedestrian
-}
+import consts
 
 def extract_yolo_annotations(ann_filepath):
     print(f"Processing: {ann_filepath}")
@@ -23,7 +20,7 @@ def extract_yolo_annotations(ann_filepath):
         obj_class_id = int(obj_info[2])
         if obj_class_id == 10:
             continue
-        assert obj_class_id in KITTI2COCO, f"Unknown class ID: {obj_class_id}"
+        assert obj_class_id in consts.KITTI2COCO, f"Unknown class ID: {obj_class_id}"
         obj_timeframes.append(obj_info[0])
         img_height = int(obj_info[3])  # Assuming the height is stored at index 3
         img_width = int(obj_info[4])   # Assuming the width is stored at index 4
@@ -35,7 +32,7 @@ def extract_yolo_annotations(ann_filepath):
             'counts': rle_str
         }
         rle_list.append(rle)
-        obj_info_list.append((KITTI2COCO[obj_class_id], img_width, img_height))
+        obj_info_list.append((consts.KITTI2COCO[obj_class_id], img_width, img_height))
     try:
         # decoded_masks = decode_rle_batch(rle_list)
         decoded_bboxes = toBbox(rle_list)
@@ -96,6 +93,8 @@ def convert_kitti_to_yolo(kitti_anno_dir, output_dir, training_sequences, valida
                     for file in files:
                         if file.endswith(".png") or file.endswith(".jpg"):
                             folder_name = os.path.basename(root)
+                            if folder_name not in sequence_ids:
+                                continue
                             new_file_name = f"{folder_name}_{file}"
                             src_file_path = os.path.join(root, file)
                             dst_file_path = os.path.join(output_dir_images, new_file_name)
@@ -112,14 +111,13 @@ def convert_kitti_to_yolo(kitti_anno_dir, output_dir, training_sequences, valida
 if __name__ == "__main__":
     kitti_dir_input = "/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS/instances_txt"
     # kitti_dir_input = "/projects/master/c5/KITTI_MOTS/instances_txt"
-    kitti_dir_output = "/ghome/c5mcv03/test/KITTI-MOTS-YOLO"
     # kitti_dir_output = "/projects/master/c5/test/KITTI_MOTS_YOLO"
 
     training_sequences = [str(sequence).zfill(4) for sequence in list(range(0, 16))]
     validation_sequences = [str(sequence).zfill(4) for sequence in list(range(16, 21))]
     
     convert_kitti_to_yolo(kitti_anno_dir = kitti_dir_input,
-                          output_dir = kitti_dir_output,
+                          output_dir = consts.PATH_KITTI_MOTS_YOLO,
                           training_sequences = training_sequences,
                           validation_sequences = validation_sequences,
                           copy_images = True)

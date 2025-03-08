@@ -71,3 +71,24 @@ def augment_and_transform_batch(
         result.pop("pixel_mask", None)
 
     return result
+
+
+def augment_and_transform_batch_deart(
+    examples: Dataset,
+    image_processor: AutoImageProcessor,
+):
+    
+    images, annotations = [], []
+    for image, img_id, img_annotations in zip(examples['image'], examples['image_id'], examples['annotations']):
+        images.append(np.array(image.convert("RGB"))[:, :, ::-1])
+        if len(img_annotations) > 0:
+            annotations.append({
+                "image_id": img_id,
+                "annotations": img_annotations
+            })
+        else:
+            annotations.append({
+                "image_id": img_id,
+                "annotations": []
+            })
+    return image_processor(images=images, annotations=annotations, return_tensors="pt")

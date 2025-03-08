@@ -13,7 +13,7 @@ import json
 from tqdm import tqdm
 
 
-def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False) -> Tuple[torch.nn.Module, AutoImageProcessor, torch.device]:
+def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False, for_dataset: str = 'KITTI') -> Tuple[torch.nn.Module, AutoImageProcessor]:
     """
     Load model, processor, and determine device.
     
@@ -23,44 +23,57 @@ def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False) -> T
     Returns:
         Tuple containing model, image processor, and device
     """
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    if device == torch.device('cuda'):
-        print('Using GPU:', torch.cuda.get_device_name())
-    else:
-        # Comentar aquesta linia per executar en local sense gpu i posar pass
-        raise Exception('No GPU available')
-    image_processor = AutoImageProcessor.from_pretrained(model_name)
     model: DetrForObjectDetection = AutoModelForObjectDetection.from_pretrained(model_name)
 
-    if modified:
+    if for_dataset == 'KITTI':
+        max_height, max_width = consts.MAX_HEIGHT_SIZE_KITTI, consts.MAX_WIDTH_SIZE_KITTI
+        if modified:
+            # Update the number of classes
+            model.config.num_labels = 2
+            model.config.id2label = {0: 'N/A', 1: 'car', 2: 'pedestrian'}
+            model.config.label2id = {'N/A': 0, 'car': 1, 'pedestrian': 2}
+
+            # Get original classifier weights
+            old_weight = model.class_labels_classifier.weight.data
+            old_bias = model.class_labels_classifier.bias.data
+
+            input_dim = old_weight.shape[1]
+
+            # Select only the weights and biases of the desired classes
+            new_weight = old_weight[[0, 3, 1, -1]].clone()
+            new_bias = old_bias[[0, 3, 1, -1]].clone()
+
+            # Create a new classifier layer with the correct shape
+            new_classifier = nn.Linear(input_dim, 4)  # 4 classes (N/A, pedestrian, car and wtf)
+
+            # Assign new weights and biases properly
+            new_classifier.weight = nn.Parameter(new_weight)
+            new_classifier.bias = nn.Parameter(new_bias)
+
+            # Replace the classifier in the model
+            model.class_labels_classifier = new_classifier
+    elif for_dataset == 'DEART':
+        max_height, max_width = consts.MAX_HEIGHT_SIZE_DEART, consts.MAX_WIDTH_SIZE_DEART
+        
         # Update the number of classes
-        model.config.num_labels = 2
-        model.config.id2label = {0: 'N/A', 1: 'car', 2: 'pedestrian'}
-        model.config.label2id = {'N/A': 0, 'car': 1, 'pedestrian': 2}
+        model.config.num_labels = 70
+        model.config.id2label = {i: str(i) for i in range(70)}
+        model.config.label2id = {str(i): i for i in range(70)}
 
-        # Get original classifier weights
-        old_weight = model.class_labels_classifier.weight.data
-        old_bias = model.class_labels_classifier.bias.data
-
-        input_dim = old_weight.shape[1]
-
-        # Select only the weights and biases of the desired classes
-        new_weight = old_weight[[0, 3, 1, -1]].clone()
-        new_bias = old_bias[[0, 3, 1, -1]].clone()
-
-        # Create a new classifier layer with the correct shape
-        new_classifier = nn.Linear(input_dim, 4)  # 4 classes (N/A, pedestrian, car and wtf)
-
-        # Assign new weights and biases properly
-        new_classifier.weight = nn.Parameter(new_weight)
-        new_classifier.bias = nn.Parameter(new_bias)
-
-        # Replace the classifier in the model
+        new_classifier = nn.Linear(256, 71)  # 3 classes (N/A, pedestrian, car)
         model.class_labels_classifier = new_classifier
-
-    model.to(device)
+    else:
+        raise ValueError(f"Unknown dataset: {for_dataset}")
     
-    return model, image_processor, device
+    image_processor = AutoImageProcessor.from_pretrained(
+        model_name,
+        do_resize=True,
+        size={"max_height": max_height, "max_width": max_width},
+        do_pad=True,
+        pad_size={"height": max_height, "width": max_width},
+    )
+    
+    return model, image_processor
 
 
 def run_inference(model: torch.nn.Module, 
