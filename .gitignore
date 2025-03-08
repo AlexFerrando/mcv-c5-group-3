@@ -1,6 +1,7 @@
 # Dataset
 KITTI_MOTS
 huggingface/evaluation_results
+jobs_pol/
 *.yaml
 
 # Byte-compiled / optimized / DLL files
