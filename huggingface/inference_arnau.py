@@ -170,8 +170,8 @@ def save_predictions(predictions: List[Dict], video_name: str) -> None:
     
     # Definir la ruta de salida
     
-    #output_folder = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/huggingface/evaluation_results/off-the-shelf/predictions'
-    output_folder = '/ghome/c5mcv03/mcv-c5-group-3/detectron2/evaluation/DeTR/off-the-shelf'
+    output_folder = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/huggingface/evaluation_results/off-the-shelf/predictions'
+    #output_folder = '/ghome/c5mcv03/mcv-c5-group-3/detectron2/evaluation/DeTR/off-the-shelf'
 
     os.makedirs(output_folder, exist_ok=True)  # Crea la carpeta si no existe
 
@@ -183,8 +183,8 @@ def save_predictions(predictions: List[Dict], video_name: str) -> None:
         json.dump(predictions, f, indent=4)
 
 if __name__ == '__main__':
-    DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
-    #DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'    
+    #DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
+    DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'    
     
     videos = os.listdir(DATASET_PATH + '/training/image_02')
     
@@ -202,11 +202,18 @@ if __name__ == '__main__':
         batch_size = 10
         all_predictions = []  # Aquí se almacenarán todas las predicciones para el video
 
+        id_image_counter = 0
+
         # Añadir un tqdm para los lotes
         for i in tqdm(range(0, len(frames), batch_size), desc=f"Processing batches for {video}", unit="batch"):
             batch_frames = frames[i:i + batch_size]
             predictions = run_inference(model, image_processor, batch_frames, device)
+            
+            for i, prediction in enumerate(predictions):
+                predictions[i]['image_id'] += id_image_counter
+            
             all_predictions.extend(predictions)  # Agregar las predicciones del lote actual
+            id_image_counter += batch_size
 
         # Guardar todas las predicciones del video en un solo archivo
         save_predictions(all_predictions, video_name=video)
