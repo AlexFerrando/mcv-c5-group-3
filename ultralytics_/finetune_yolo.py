@@ -28,7 +28,7 @@ if __name__ == "__main__":
         scale=0.0,
         fliplr=0.0,
         erasing=0.0,
-        crop_fraction=0.0,
+        crop_fraction=1.0,
         patience=10,
         lr0=0.1,
         batch=16,
