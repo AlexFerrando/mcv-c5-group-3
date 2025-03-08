@@ -18,7 +18,7 @@ from read_data import read_data
 import consts
 from transformers.image_transforms import center_to_corners_format
 import wandb
-from finetuning_utils import augment_and_transform_batch
+from finetuning_utils import augment_and_transform_batch, augment_and_transform_batch_deart
 
 
 class WandbCallback(TrainerCallback):
@@ -175,29 +175,37 @@ elif DATASET == 'DEART':
     test_data = data['test']
 
 
-# Clean and transform data
-train_augment_and_transform = A.Compose(
-    [
-        A.Perspective(p=0.1),
-        A.HorizontalFlip(p=0.5),
-        A.RandomBrightnessContrast(p=0.5),
-        A.HueSaturationValue(p=0.1),
-    ],
-    bbox_params=A.BboxParams(format="coco", label_fields=["category"], clip=True, min_area=25),
-)
+if DATASET == 'KITTI':
+    # Clean and transform data
+    train_augment_and_transform = A.Compose(
+        [
+            A.Perspective(p=0.1),
+            A.HorizontalFlip(p=0.5),
+            A.RandomBrightnessContrast(p=0.5),
+            A.HueSaturationValue(p=0.1),
+        ],
+        bbox_params=A.BboxParams(format="coco", label_fields=["category"], clip=True, min_area=25),
+    )
 
-test_augment_and_transform = A.Compose(
-    [A.NoOp()],
-    bbox_params=A.BboxParams(format="coco", label_fields=["category"], clip=True, min_area=25),
-)
+    test_augment_and_transform = A.Compose(
+        [A.NoOp()],
+        bbox_params=A.BboxParams(format="coco", label_fields=["category"], clip=True, min_area=25),
+    )
+    train_transform_batch = partial(
+        augment_and_transform_batch, transform=train_augment_and_transform, image_processor=image_processor
+    )
 
-train_transform_batch = partial(
-    augment_and_transform_batch, transform=train_augment_and_transform, image_processor=image_processor
-)
+    test_transform_batch = partial(
+        augment_and_transform_batch, transform=test_augment_and_transform, image_processor=image_processor
+    )
+elif DATASET == 'DEART':
+    train_transform_batch = partial(
+        augment_and_transform_batch_deart, image_processor=image_processor
+    )
 
-test_transform_batch = partial(
-    augment_and_transform_batch, transform=test_augment_and_transform, image_processor=image_processor
-)
+    test_transform_batch = partial(
+        augment_and_transform_batch_deart, image_processor=image_processor
+    )
 
 train_data = train_data.with_transform(train_transform_batch)
 test_data = test_data.with_transform(test_transform_batch)
