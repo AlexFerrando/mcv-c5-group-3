@@ -22,7 +22,7 @@ if __name__ == "__main__":
         data=config_dataset_path,
         epochs=300,
         patience=15,
-        batch=-1,
+        batch=64,
         save_period=50,
         cache=True,
         device='0',
