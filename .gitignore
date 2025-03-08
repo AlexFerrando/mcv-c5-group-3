@@ -145,6 +145,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.detectron2_env
 
 # Spyder project settings
 .spyderproject
