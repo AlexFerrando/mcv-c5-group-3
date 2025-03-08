@@ -21,9 +21,11 @@ if __name__ == "__main__":
     model.train(
         data=config_dataset_path,
         epochs=30,
+        patience=10,
+        lr0=0.1,
         batch=16,
         save_period=50,
         device='0',
         project=args.output_path,
-        name=f"{args.model_path}_trained"
+        name=f"yolo11n finetuned 30 epochs 0.1lr0",
     )
