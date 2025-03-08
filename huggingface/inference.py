@@ -13,7 +13,7 @@ import json
 from tqdm import tqdm
 
 
-def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False, for_dataset: str = 'KITTI') -> Tuple[torch.nn.Module, AutoImageProcessor, torch.device]:
+def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False, for_dataset: str = 'KITTI') -> Tuple[torch.nn.Module, AutoImageProcessor]:
     """
     Load model, processor, and determine device.
     
@@ -73,7 +73,7 @@ def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False, for_
         pad_size={"height": max_height, "width": max_width},
     )
     
-    return model, image_processor, device
+    return model, image_processor
 
 
 def run_inference(model: torch.nn.Module, 

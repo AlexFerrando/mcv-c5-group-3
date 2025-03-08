@@ -118,7 +118,7 @@ def compute_metrics(
 DATASET = 'DEART'
 
 # Load model and image processor
-model, image_processor, device = load_model(modified=True, for_dataset=DATASET)
+model, image_processor = load_model(modified=True, for_dataset=DATASET)
 
 # Define evaluation function
 eval_compute_metrics_fn = partial(
