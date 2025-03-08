@@ -93,6 +93,8 @@ def convert_kitti_to_yolo(kitti_anno_dir, output_dir, training_sequences, valida
                     for file in files:
                         if file.endswith(".png") or file.endswith(".jpg"):
                             folder_name = os.path.basename(root)
+                            if folder_name not in sequence_ids:
+                                continue
                             new_file_name = f"{folder_name}_{file}"
                             src_file_path = os.path.join(root, file)
                             dst_file_path = os.path.join(output_dir_images, new_file_name)
