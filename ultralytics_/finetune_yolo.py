@@ -20,11 +20,9 @@ if __name__ == "__main__":
     add_wandb_callback(model, enable_model_checkpointing = True)
     model.train(
         data=config_dataset_path,
-        epochs=300,
-        patience=15,
+        epochs=30,
         batch=16,
         save_period=50,
-        cache=True,
         device='0',
         project=args.output_path,
         name=f"{args.model_path}_trained"
