@@ -1,6 +1,5 @@
 import os
 import numpy as np
-from pycocotools import mask as COCOmask
 from pycocotools.mask import toBbox
 import matplotlib.pyplot as plt
 import shutil
@@ -9,10 +8,6 @@ KITTI2COCO = {
     1: 2, # Car
     2: 0, # Pedestrian
 }
-
-def decode_rle_batch(rle_list):
-    decoded_masks = COCOmask.decode(rle_list)
-    return decoded_masks
 
 def extract_yolo_annotations(ann_filepath):
     print(f"Processing: {ann_filepath}")
@@ -31,7 +26,6 @@ def extract_yolo_annotations(ann_filepath):
         if obj_class_id == 10:
             continue
         obj_timeframes.append(obj_info[0])
-        print(obj_info[0], end=' ')
         img_height = int(obj_info[3])  # Assuming the height is stored at index 3
         img_width = int(obj_info[4])   # Assuming the width is stored at index 4
         rle_str = obj_info[5]
@@ -44,39 +38,32 @@ def extract_yolo_annotations(ann_filepath):
         rle_list.append(rle)
         obj_info_list.append((KITTI2COCO[obj_class_id], img_width, img_height))
     print()
-    # Decode RLE masks in batch
     try:
-        decoded_masks = decode_rle_batch(rle_list)
+        # decoded_masks = decode_rle_batch(rle_list)
+        decoded_bboxes = toBbox(rle_list)
     except Exception as e:
         print(f"Error decoding RLE batch: {e}")
         return []
 
     yolo_annotations = {}
 
-    print("shape decoded_masks", decoded_masks.shape)
-    for i in range(decoded_masks.shape[2]):
+    # Iterate over each bounding box to compute YOLO format values
+    for i, bbox in enumerate(decoded_bboxes):
         obj_timeframe = obj_timeframes[i].zfill(6)
         if obj_timeframe not in yolo_annotations:
             yolo_annotations[obj_timeframe] = []
         obj_class_id, img_width, img_height = obj_info_list[i]
-        decoded_mask = decoded_masks[:, :, i]
-        # Calculate bounding box from the decoded mask
-        y_indices, x_indices = decoded_mask.nonzero()
-        if len(x_indices) == 0 or len(y_indices) == 0:
-            print(f"Empty mask for object {i}, skipping.")
-            continue
-        x_min, x_max = x_indices.min(), x_indices.max()
-        y_min, y_max = y_indices.min(), y_indices.max()
-        bbox_width = x_max - x_min
-        bbox_height = y_max - y_min
-        x_center = (x_min + bbox_width / 2) / img_width
-        y_center = (y_min + bbox_height / 2) / img_height
-        bbox_width /= img_width
-        bbox_height /= img_height
-        yolo_annotation = f"{obj_class_id} {x_center} {y_center} {bbox_width} {bbox_height}"
+        
+        # Use the bounding box values directly
+        x, y, w, h = bbox
+        x_center = (x + w / 2) / img_width
+        y_center = (y + h / 2) / img_height
+        w_norm = w / img_width
+        h_norm = h / img_height
+        
+        yolo_annotation = f"{obj_class_id} {x_center} {y_center} {w_norm} {h_norm}"
         print(obj_timeframe, end=' ')
         yolo_annotations[obj_timeframe].append(yolo_annotation)
-    print()
     return yolo_annotations
 
 def convert_kitti_to_yolo(kitti_anno_dir, output_dir, copy_images=False):
@@ -98,6 +85,7 @@ def convert_kitti_to_yolo(kitti_anno_dir, output_dir, copy_images=False):
                 with open(yolo_ann_filepath, 'w') as f:
                     f.write('\n'.join(yolo_img_objects))
                 print(f"Saved YOLO annotations to {yolo_ann_filepath}")
+
         if copy_images:
             # Copy images to the output directory
             img_dir = os.path.join(kitti_anno_dir, "..", "training", "image_02")
