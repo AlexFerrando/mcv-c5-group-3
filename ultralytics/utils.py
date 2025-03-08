@@ -58,9 +58,9 @@ def draw_yolo_bbox(image_path, annotation_path, save_path):
     plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
     plt.close()
 
-# Example usage:
-annotation_file_path = "/ghome/c5mcv03/test/KITTI-MOTS-YOLO/0000_153.txt"  # Replace with your annotation file path
-image_file_path = "/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS/training/image_02/0000/000153.png"  # Replace with your image file path
-save_image_path = "/ghome/c5mcv03/mcv-c5-group-3/ultralytics/test.png"  # Replace with your desired save path
+if __name__ == "__main__":
+    annotation_file_path = "/ghome/c5mcv03/test/KITTI-MOTS-YOLO/0000_153.txt"  # Replace with your annotation file path
+    image_file_path = "/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS/training/image_02/0000/000153.png"  # Replace with your image file path
+    save_image_path = "/ghome/c5mcv03/mcv-c5-group-3/ultralytics/test.png"  # Replace with your desired save path
 
-draw_yolo_bbox(image_file_path, annotation_file_path, save_image_path)
+    draw_yolo_bbox(image_file_path, annotation_file_path, save_image_path)
