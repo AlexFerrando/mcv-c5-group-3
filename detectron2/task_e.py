@@ -1,62 +1,55 @@
-from detectron2.engine import DefaultTrainer
-from detectron2.data import MetadataCatalog, DatasetCatalog
+from detectron2.engine import DefaultTrainer, DefaultPredictor
+from detectron2.data import DatasetMapper, build_detection_test_loader
 from detectron2.config import get_cfg
 from detectron2 import model_zoo
-from detectron2.data import build_detection_train_loader
 import detectron2.data.transforms as T
+from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 
 import os
 import wandb
 import albumentations as A
 import consts
 
-from read_data import register_kitti_mots
 from utils import register_datasets
 
 # WandB Project Name
 WANDB_PROJECT_NAME = "C5-Week1"
 
-# Augmentation Wrapper for Albumentations
-class AlbumentationsMapper:
+class AlbumentationsMapper(DatasetMapper):
     def __init__(self):
-        self.transform = A.Compose([
-            A.HorizontalFlip(p=0.5),
-            A.RandomBrightnessContrast(p=0.2),
-            A.MotionBlur(p=0.2),
-            A.MedianBlur(blur_limit=3, p=0.1),
-            A.GaussNoise(p=0.2),
-        ])
+        self.augmentations = self.get_augmentations()
 
     def __call__(self, dataset_dict):
         dataset_dict = dataset_dict.copy()
-        image = dataset_dict["image"]
-        image = self.transform(image=image)["image"]
-        dataset_dict["image"] = image
+        
         return dataset_dict
+    
+    @staticmethod
+    def get_augmentations():
+        return A.Compose([
+            A.RandomCrop(width=800, height=290),
+            A.HorizontalFlip(p=0.5),
+            A.RandomBrightnessContrast(p=0.2),
+            A.ShiftScaleRotate(p=0.25),
+        ], bbox_params=A.BboxParams(format='coco', label_fields=['category']))
 
-# Custom Trainer for Detectron2 + WandB
-class WandBTrainer(DefaultTrainer):
+
+class WandbTrainer(DefaultTrainer):
     def __init__(self, cfg):
         wandb.init(project=WANDB_PROJECT_NAME, config=cfg)
         super().__init__(cfg)
 
-    def after_step(self):
-        """Log training loss to WandB after each step."""
-        loss_dict = {k: v.item() for k, v in self.storage.latest().items() if "loss" in k}
-        wandb.log(loss_dict)
-
-# Function to Train & Fine-Tune the Model
 def train_model():
-    # Init WandB
+
     wandb.init(project=WANDB_PROJECT_NAME, name="Detectron2")
 
     cfg = get_cfg()
-    cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
+    cfg.merge_from_file(model_zoo.get_config_file(consts.MODEL_NAME))
 
     cfg.DATASETS.TRAIN = ("kitti_mots_train",)
     cfg.DATASETS.TEST = ("kitti_mots_validation",)
     cfg.DATALOADER.NUM_WORKERS = 2
-    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
+    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(consts.MODEL_NAME)
 
     # Use WandB hyperparameters
     cfg.SOLVER.IMS_PER_BATCH = wandb.config.images_per_batch
@@ -67,10 +60,21 @@ def train_model():
 
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
 
-    trainer = WandBTrainer(cfg)
+    print('Starting training...')
+    trainer = WandbTrainer(cfg)
     trainer.resume_or_load(resume=False)
     trainer.train()
 
+    print('Evaluating trained model...')
+    eval_cfg = cfg.clone()
+    eval_cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
+    eval_predictor = DefaultPredictor(eval_cfg)
+
+    dataset_name = ''
+    evaluator = COCOEvaluator(dataset_name, eval_cfg, False, output_dir="evaluation/")
+    val_loader = build_detection_test_loader(eval_cfg, dataset_name)
+    print(inference_on_dataset(eval_predictor.model, val_loader, evaluator))
+    
     wandb.finish()
 
 def run_hyperparameter_search(count=10):

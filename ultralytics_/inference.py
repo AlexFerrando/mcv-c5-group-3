@@ -21,10 +21,11 @@ if __name__ == "__main__":
     model_path = "yolo11n.pt"
     
     sequence_path = "/ghome/c5mcv03/KITTI-MOTS-YOLO/validation/images"
-    sequence_path = "/projects/master/c5/KITTI-MOTS-big/training/image_02/0013"
+    sequence_path = "/projects/master/c5/KITTI-MOTS-big/training/image_02/0019"
     
 
-    output_inferred_images_path = os.path.join(consts.BASE_PATH_OUTPUT_LOCAL, "inference_images", "0013")
+    output_inferred_images_path = os.path.join(consts.BASE_PATH_OUTPUT_LOCAL, "inference_images", "0019")
+    os.makedirs(output_inferred_images_path, exist_ok=True)
     print(output_inferred_images_path)
-    inference_arguments = {'classes': consts.YOLO_CLASSES}
+    inference_arguments = {'classes': consts.YOLO_CLASSES, "stream": True}
     main(model_path, sequence_path, output_inferred_images_path, inference_arguments)

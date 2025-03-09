@@ -22,7 +22,7 @@ if __name__ == "__main__":
         data=config_dataset_path,
         classes=consts.YOLO_CLASSES,
         
-        epochs=30,
+        epochs=20,
         optimizer="Adam",
         freeze=23,
         
@@ -39,7 +39,8 @@ if __name__ == "__main__":
         # auto_augment='autoaugment'
         
         patience=10,
-        lr0=0.01,
+        lr0=0.00005,
+        warmup_epochs=6,
         batch=16,
         save_period=50,
         
