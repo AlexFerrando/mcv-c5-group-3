@@ -13,12 +13,12 @@ import torch
 import torchvision.transforms.functional as F
 
 from datasets import load_dataset
-from inference import load_model
+from inference import load_model, load_model_cppe5
 from read_data import read_data
 import consts
 from transformers.image_transforms import center_to_corners_format
 import wandb
-from finetuning_utils import augment_and_transform_batch, augment_and_transform_batch_deart
+from finetuning_utils import augment_and_transform_batch, augment_and_transform_batch_cppe5
 
 
 class WandbCallback(TrainerCallback):
@@ -78,12 +78,23 @@ def compute_metrics(
     post_processed_predictions = []
 
     for batch in targets:
-        batch_image_sizes = torch.tensor(np.array([x["orig_size"] for x in batch]))
+        sizes = []
+        for x in batch:
+            if len(x['orig_size']) == 1:
+                sizes.append([x['orig_size'][0], x['orig_size'][0]])
+            else:
+                sizes.append(x['orig_size'])
+        batch_image_sizes = torch.tensor(np.array(sizes))
         image_sizes.append(batch_image_sizes)
         
         for image_target in batch:
             boxes = torch.tensor(image_target["boxes"])
-            boxes = convert_bbox_yolo_to_pascal(boxes, image_target["orig_size"])
+            target_size = []
+            if len(image_target['orig_size']) == 1:
+                target_size = [image_target['orig_size'][0], image_target['orig_size'][0]]
+            else:
+                target_size = image_target['orig_size']
+            boxes = convert_bbox_yolo_to_pascal(boxes, target_size)
             labels = torch.tensor(image_target["class_labels"])
             post_processed_targets.append({"boxes": boxes, "labels": labels})
 
@@ -115,23 +126,15 @@ def compute_metrics(
 
 
 # Load dataset
-DATASET = 'DEART'
-
-# Load model and image processor
-model, image_processor = load_model(modified=True, for_dataset=DATASET)
-
-# Define evaluation function
-eval_compute_metrics_fn = partial(
-    compute_metrics, image_processor=image_processor, id2label=model.config.id2label, threshold=0.5
-)
+DATASET = 'CPPE5'
 
 # Define training arguments
 training_args = TrainingArguments(
-    output_dir="./outputs/alex/detr_finetuned",
-    num_train_epochs=10,
+    output_dir="./outputs/alex/detr_finetuned_cppe5",
+    num_train_epochs=75,
     fp16=False,
-    per_device_train_batch_size=8, # Change to 1 locally
-    per_device_eval_batch_size=8, # Change to 1 locally
+    per_device_train_batch_size=2, # Change to 1 locally
+    per_device_eval_batch_size=2, # Change to 1 locally
     dataloader_num_workers=4, # Change to 0 locally
     learning_rate=5e-5,
     lr_scheduler_type="cosine",
@@ -140,8 +143,8 @@ training_args = TrainingArguments(
     metric_for_best_model="eval_map",
     greater_is_better=True,
     load_best_model_at_end=False, # True if we want to load the best model at the end of training
-    eval_strategy="steps",
-    eval_steps=400,
+    eval_strategy="epoch",
+    eval_steps=1,
     save_strategy="epoch",
     save_total_limit=1,
     remove_unused_columns=False,
@@ -165,32 +168,47 @@ if DATASET == 'KITTI':
     # data = data["train"].train_test_split(test_size=0.2)
     # train_data = data["train"]
     # test_data = data["test"]
+    model, image_processor = load_model(modified=True)
 
-elif DATASET == 'DEART':
-    data = load_dataset('davanstrien/deart')
+elif DATASET == 'CPPE5':
+    data = load_dataset('cppe-5')
+    # Assign id2label and label2id
     # Remove very large images (heigh or width > 2000)
-    data['train'] = data['train'].filter(lambda x: x['width'] <= 2000 and x['height'] <= 2000, num_proc=4)
+    # data['train'] = data['train'].filter(lambda x: x['width'] <= 1920 and x['height'] <= 1080, num_proc=4)
+    data['train'] = data['train'].filter(lambda x: x['image_id'] not in [702, 97, 83], num_proc=4)
     data = data['train'].train_test_split(test_size=0.2)
     train_data = data['train']
     test_data = data['test']
 
+    # Load model and image processor
+    categories = data["train"].features["objects"].feature["category"].names
+    id2label = {index: x for index, x in enumerate(categories, start=0)}
+    label2id = {v: k for k, v in id2label.items()}
+    model, image_processor = load_model_cppe5(id2label, label2id)
+
+# Define evaluation function
+eval_compute_metrics_fn = partial(
+    compute_metrics, image_processor=image_processor, id2label=model.config.id2label, threshold=0.5
+)
+
+# Clean and transform data
+train_augment_and_transform = A.Compose(
+    [
+        A.Perspective(p=0.1),
+        A.HorizontalFlip(p=0.5),
+        A.RandomBrightnessContrast(p=0.5),
+        A.HueSaturationValue(p=0.1),
+    ],
+    # [A.NoOp()],
+    bbox_params=A.BboxParams(format="coco", label_fields=["category"], clip=True, min_area=25),
+)
+
+test_augment_and_transform = A.Compose(
+    [A.NoOp()],
+    bbox_params=A.BboxParams(format="coco", label_fields=["category"], clip=True, min_area=25),
+)
 
 if DATASET == 'KITTI':
-    # Clean and transform data
-    train_augment_and_transform = A.Compose(
-        [
-            A.Perspective(p=0.1),
-            A.HorizontalFlip(p=0.5),
-            A.RandomBrightnessContrast(p=0.5),
-            A.HueSaturationValue(p=0.1),
-        ],
-        bbox_params=A.BboxParams(format="coco", label_fields=["category"], clip=True, min_area=25),
-    )
-
-    test_augment_and_transform = A.Compose(
-        [A.NoOp()],
-        bbox_params=A.BboxParams(format="coco", label_fields=["category"], clip=True, min_area=25),
-    )
     train_transform_batch = partial(
         augment_and_transform_batch, transform=train_augment_and_transform, image_processor=image_processor
     )
@@ -198,13 +216,13 @@ if DATASET == 'KITTI':
     test_transform_batch = partial(
         augment_and_transform_batch, transform=test_augment_and_transform, image_processor=image_processor
     )
-elif DATASET == 'DEART':
+elif DATASET == 'CPPE5':
     train_transform_batch = partial(
-        augment_and_transform_batch_deart, image_processor=image_processor
+        augment_and_transform_batch_cppe5, transform=train_augment_and_transform, image_processor=image_processor
     )
 
     test_transform_batch = partial(
-        augment_and_transform_batch_deart, image_processor=image_processor
+        augment_and_transform_batch_cppe5, transform=test_augment_and_transform, image_processor=image_processor
     )
 
 train_data = train_data.with_transform(train_transform_batch)
@@ -214,7 +232,7 @@ test_data = test_data.with_transform(test_transform_batch)
 wandb.login(key='395ee0b4fb2e10004d480c7d2ffe03b236345ddc')
 wandb.init(
     project="c6-week1",
-    name="detr_finetuning_20epochs_DEART",
+    name="detr_finetuning_20epochs_cppe5",
     config=training_args.to_dict()  # Log training arguments
 )
 
@@ -223,14 +241,14 @@ trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=train_data,
-    eval_dataset=train_data,
+    eval_dataset=test_data,
     processing_class=image_processor,
     data_collator=collate_fn,
     compute_metrics=eval_compute_metrics_fn,
 )
 trainer.add_callback(WandbCallback())
 
-print(torch.cuda.memory_summary())
+# print(torch.cuda.memory_summary())
 
 # Start training
 trainer.train()

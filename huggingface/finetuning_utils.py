@@ -73,22 +73,26 @@ def augment_and_transform_batch(
     return result
 
 
-def augment_and_transform_batch_deart(
-    examples: Dataset,
-    image_processor: AutoImageProcessor,
-):
-    
-    images, annotations = [], []
-    for image, img_id, img_annotations in zip(examples['image'], examples['image_id'], examples['annotations']):
-        images.append(np.array(image.convert("RGB"))[:, :, ::-1])
-        if len(img_annotations) > 0:
-            annotations.append({
-                "image_id": img_id,
-                "annotations": img_annotations
-            })
-        else:
-            annotations.append({
-                "image_id": img_id,
-                "annotations": []
-            })
-    return image_processor(images=images, annotations=annotations, return_tensors="pt")
+def augment_and_transform_batch_cppe5(examples, transform, image_processor, return_pixel_mask=False):
+    """Apply augmentations and format annotations in COCO format for object detection task"""
+    images = []
+    annotations = []
+
+    for image_id, image, objects in zip(examples["image_id"], examples["image"], examples["objects"]):
+        image = np.array(image.convert("RGB"))
+        # apply augmentations
+        output = transform(image=image, bboxes=objects["bbox"], category=objects["category"])
+        images.append(output["image"])
+        # format annotations in COCO format
+        formatted_annotations = format_image_annotations_as_coco(
+            image_id, output["category"], objects["area"], output["bboxes"]
+        )
+        annotations.append(formatted_annotations)
+
+    # Apply the image processor transformations: resizing, rescaling, normalization
+    result = image_processor(images=images, annotations=annotations, return_tensors="pt")
+
+    if not return_pixel_mask:
+        result.pop("pixel_mask", None)
+
+    return result
