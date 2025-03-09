@@ -22,11 +22,11 @@ if __name__ == "__main__":
         data=config_dataset_path,
         classes=consts.YOLO_CLASSES,
         
-        epochs=3,
+        epochs=20,
         optimizer="Adam",
         freeze=23,
-        
-        
+        imgsz=(1242,375),
+
         hsv_h=0.015,
         hsv_s=0.7,
         hsv_v=0.4,
@@ -40,12 +40,12 @@ if __name__ == "__main__":
         
         patience=10,
         warmup_epochs=6,
-        lr0=0.00000000000000000000000000000000001,
+        lr0=0.0001,
         batch=16,
         save_period=50,
         
         plots=True,
         device='cuda',
         project=args.output_path,
-        name=f"lr_set_to_0",
+        name=f"max_resolution_noAugmentation_frozen23",
     )
