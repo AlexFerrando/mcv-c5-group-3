@@ -38,7 +38,8 @@ if __name__ == "__main__":
         # auto_augment='autoaugment'
         
         patience=10,
-        lr0=0.01,
+        warmup_epochs=6,
+        lr0=0.00005,
         batch=16,
         save_period=50,
         
