@@ -26,7 +26,7 @@ if __name__ == "__main__":
     print(results.box.map75)  # mAP75
     print(results.box.maps)  # list of mAP50-95 for each category
     # Save the evaluation metrics to a file
-    metrics_file = os.path.join(args.output_path, "evaluation_metrics.txt")
+    metrics_file = os.path.join(args.output_path, f"{args.val_name}_evaluation_metrics.txt")
     with open(metrics_file, "w") as f:
         f.write(f"mAP50-95: {results.box.map}\n")
         f.write(f"mAP50: {results.box.map50}\n")
