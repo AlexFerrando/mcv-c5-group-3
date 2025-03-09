@@ -45,5 +45,5 @@ if __name__ == "__main__":
         plots=True,
         device='cuda',
         project=args.output_path,
-        name=f"max_resolution_noAugmentation_frozen23",
+        name=f"Augmentation_unfrozen",
     )
