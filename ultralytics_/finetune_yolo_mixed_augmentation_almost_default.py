@@ -40,12 +40,12 @@ if __name__ == "__main__":
         
         patience=10,
         warmup_epochs=6,
-        lr0=0.0005,
+        lr0=0.00001,
         batch=16,
         save_period=50,
         
         plots=True,
         device='cuda',
         project=args.output_path,
-        name=f"defaultAugmentation_freezed23_0.0005lr0_warmup6",
+        name=f"defaultAugmentation_freezed23_0.00001lr0_warmup6",
     )
