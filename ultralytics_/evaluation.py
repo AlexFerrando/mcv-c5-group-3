@@ -18,4 +18,5 @@ if __name__ == "__main__":
     model = YOLO(args.model_path)
     results = model.val(data=os.path.join(consts.PATH_KITTI_MOTS_YOLO, "kitti_mots_config.yaml"),
                         classes=consts.YOLO_CLASSES, cache=False, project=args.output_path,
-                        save_hybrid=True, split="val" if args.split_val else "train")
+                        save_hybrid=True, split="val" if args.split_val else "train",
+                        name = "off the shelf hybrid outputs pretrained model yolo11n")
