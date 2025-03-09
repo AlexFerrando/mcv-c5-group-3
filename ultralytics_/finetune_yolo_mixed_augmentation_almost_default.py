@@ -22,10 +22,8 @@ if __name__ == "__main__":
         data=config_dataset_path,
         classes=consts.YOLO_CLASSES,
         
-        epochs=20,
+        epochs=25,
         optimizer="Adam",
-        freeze=23,
-        imgsz=(1242,375),
 
         hsv_h=0.015,
         hsv_s=0.7,
@@ -38,9 +36,9 @@ if __name__ == "__main__":
         crop_fraction=1.0,
         # auto_augment='autoaugment'
         
-        patience=10,
+        patience=20,
         warmup_epochs=6,
-        lr0=0.0001,
+        lr0=0.00001,
         batch=16,
         save_period=50,
         
