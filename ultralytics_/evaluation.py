@@ -20,5 +20,4 @@ if __name__ == "__main__":
                         classes=consts.YOLO_CLASSES, cache=False, project=args.output_path,
                         plots = True, save_hybrid=True,
                         split="val" if args.split_val else "train",
-                        classes = consts.YOLO_CLASSES,
                         name = "off the shelf hybrid outputs pretrained model yolo11n")
