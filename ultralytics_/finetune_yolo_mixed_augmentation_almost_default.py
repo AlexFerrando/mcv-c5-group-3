@@ -46,5 +46,5 @@ if __name__ == "__main__":
         plots=True,
         device='cuda',
         project=args.output_path,
-        name=f"defaultAugmentation freezed23",
+        name=f"defaultAugmentation_freezed23_0.005_lr0",
     )
