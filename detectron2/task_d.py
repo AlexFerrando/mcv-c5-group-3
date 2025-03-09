@@ -1,9 +1,10 @@
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.data import build_detection_test_loader, DatasetCatalog, MetadataCatalog
+from detectron2.engine import DefaultPredictor
 
 from detector import Detector
 import consts
-from read_data import register_kitti_mots, load_kitti_mots_dataset
+from read_data_help import CustomKittiMotsDataset
 
 def evaluate_model(dataset_name, detector):
     """
@@ -13,6 +14,9 @@ def evaluate_model(dataset_name, detector):
         dataset_name (str): Dataset name.
         detector (Detector): The initialized Detector instance.
     """  
+    # Create predictor
+    predictor = DefaultPredictor(detector.cfg)
+
     # Evaluate using COCO evaluator
     print("Starting model evaluation...")
     evaluator = COCOEvaluator(dataset_name, detector.cfg, False, output_dir="evaluation/")
@@ -20,26 +24,22 @@ def evaluate_model(dataset_name, detector):
     
     # Perform evaluation
     print("Running inference...")
-    print(inference_on_dataset(detector.predictor.model, val_loader, evaluator))
+    print(inference_on_dataset(predictor.model, val_loader, evaluator))
 
 
 if __name__ == '__main__':
 
-    # Initialize Detector
     detector = Detector()
 
-    dataset_name = "kitti_mots_training"
-    if dataset_name in DatasetCatalog.list():
-        print(f"Removing existing dataset '{dataset_name}' to avoid cache issues...")
-        DatasetCatalog.remove(dataset_name)
-
     # Register dataset
-    dataset_path = consts.KITTI_MOTS_PATH
-    DatasetCatalog.register(dataset_name, lambda: load_kitti_mots_dataset(dataset_path))
+    dataset_name = "kitti_mots"
+    DatasetCatalog.register(dataset_name, lambda: CustomKittiMotsDataset(consts.KITTI_MOTS_PATH, use_coco_ids=True, split="val"))
 
     # Set metadata
-    MetadataCatalog.get(dataset_name).set(thing_classes=["Person", "Car"])
-    detector.cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2
+    coco_classes = [""] * 81
+    coco_classes[0] = "person"
+    coco_classes[2] = "car"
+    MetadataCatalog.get(dataset_name).set(thing_classes=coco_classes)
 
     # Evaluate the model
     evaluate_model(dataset_name, detector)

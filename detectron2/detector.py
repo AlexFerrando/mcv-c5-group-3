@@ -1,6 +1,4 @@
-from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
-from detectron2.data import MetadataCatalog
 from detectron2.utils.visualizer import Visualizer
 from detectron2 import model_zoo
 
@@ -19,20 +17,9 @@ class Detector:
         self.cfg.merge_from_file(model_zoo.get_config_file(consts.MODEL_NAME))
         self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(consts.MODEL_NAME)
 
-        # Set dataset for training and testing
-        self.cfg.DATASETS.TRAIN = ("kitti_mots_training",)
-        self.cfg.DATASETS.TEST = ("kitti_mots_training",)
-
         # Model settings
-        self.cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2  # Active only for evaluation
-        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5 # 0.5 for Inference
+        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.6
         self.cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-        self.predictor = DefaultPredictor(self.cfg)
-
-        # self.metadata = MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0])
-        # self.metadata = MetadataCatalog.get("coco_2017_val")
-        self.metadata = MetadataCatalog.get("kitti_mots_training")
 
     def run_inference(self, image: Image.Image) -> Dict:
         """
