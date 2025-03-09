@@ -24,11 +24,12 @@ if __name__ == "__main__":
         hsv_h=0.0,
         hsv_s=0.0,
         hsv_v=0.0,
-        translate=0.0,
-        scale=0.0,
+        translate=0.1,
+        scale=0.25,
         fliplr=0.0,
-        erasing=0.0,
-        crop_fraction=1.0,
+        mosaic=0.0,
+        erasing=0.4,
+        crop_fraction=0.9,
         # auto_augment='autoaugment'
         patience=10,
         lr0=0.1,
@@ -36,5 +37,5 @@ if __name__ == "__main__":
         save_period=50,
         device='0',
         project=args.output_path,
-        name=f"yolo11n no augmentation finetuned 30 epochs 0.1lr0",
+        name=f"yolo11n mixedAugmentation 30 epochs 0.1lr0",
     )
