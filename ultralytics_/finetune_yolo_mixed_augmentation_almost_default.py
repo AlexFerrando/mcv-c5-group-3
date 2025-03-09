@@ -22,7 +22,7 @@ if __name__ == "__main__":
         data=config_dataset_path,
         classes=consts.YOLO_CLASSES,
         
-        epochs=30,
+        epochs=3,
         optimizer="Adam",
         freeze=23,
         
@@ -40,12 +40,12 @@ if __name__ == "__main__":
         
         patience=10,
         warmup_epochs=6,
-        lr0=0.00001,
+        lr0=0.00000000000000000000000000000000001,
         batch=16,
         save_period=50,
         
         plots=True,
         device='cuda',
         project=args.output_path,
-        name=f"defaultAugmentation_freezed23_0.00001lr0_warmup6",
+        name=f"lr_set_to_0",
     )
