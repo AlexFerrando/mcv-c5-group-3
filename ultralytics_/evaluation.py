@@ -19,7 +19,7 @@ if __name__ == "__main__":
     model = YOLO(args.model_path)
     results = model.val(data=os.path.join(consts.PATH_KITTI_MOTS_YOLO, "kitti_mots_config.yaml"),
                         classes=consts.YOLO_CLASSES, cache=False, project=args.output_path,
-                        split="val" if args.split_val else "train",
+                        # split="val" if args.split_val else "train",
                         name=args.val_name)
     print(results.box.map)  # mAP50-95
     print(results.box.map50)  # mAP50
@@ -37,5 +37,21 @@ if __name__ == "__main__":
         f.write("\n\n")
         f.write("    All categories:\n")
         f.write(f"    {results.box.maps}\n")
+        #TODO include
+# # Print specific metrics
+# print("Class indices with average precision:", results.ap_class_index)
+# print("Average precision for all classes:", results.box.all_ap)
+# print("Average precision:", results.box.ap)
+# print("Average precision at IoU=0.50:", results.box.ap50)
+# print("Class-specific results:", results.box.class_result)
+# print("F1 score:", results.box.f1)
+# print("Mean average precision:", results.box.map)
+# print("Mean average precision at IoU=0.50:", results.box.map50)
+# print("Mean average precision at IoU=0.75:", results.box.map75)
+# print("Mean precision:", results.box.mp)
+# print("Mean recall:", results.box.mr)
+# print("Precision:", results.box.p)
+# print("Recall:", results.box.r)
+        
         
     print(f"Metrics saved to {metrics_file}")
