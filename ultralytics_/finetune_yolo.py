@@ -17,7 +17,7 @@ if __name__ == "__main__":
     wandb.login(key = "8410a2da3f323633210ca8d25ce6862368d9f489")
     model = YOLO(args.model_path)
     config_dataset_path = os.path.join(consts.PATH_KITTI_MOTS_YOLO, "kitti_mots_config.yaml")
-    add_wandb_callback(model, enable_model_checkpointing = True)
+    add_wandb_callback(model, enable_model_checkpointing = False, enable_train_validation_logging=False)
     model.train(
         data=config_dataset_path,
         classes=consts.YOLO_CLASSES,
@@ -42,7 +42,7 @@ if __name__ == "__main__":
         batch=16,
         save_period=50,
         
-        plots=True,
+        plots=False,
         device='0',
         project=args.output_path,
         name=f"noAugmentation freezed23",
