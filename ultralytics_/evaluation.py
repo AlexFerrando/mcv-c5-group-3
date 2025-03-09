@@ -21,4 +21,15 @@ if __name__ == "__main__":
                         plots = True, save_hybrid=True, save_json = True,
                         split="val" if args.split_val else "train",
                         name = "off the shelf hybrid outputs pretrained model yolo11n")
-    print(results.box.maps)
+    print(results.box.map)  # mAP50-95
+    print(results.box.map50)  # mAP50
+    print(results.box.map75)  # mAP75
+    print(results.box.maps)  # list of mAP50-95 for each category
+    # Save the evaluation metrics to a file
+    metrics_file = os.path.join(args.output_path, "evaluation_metrics.txt")
+    with open(metrics_file, "w") as f:
+        f.write(f"mAP50-95: {results.box.map}\n")
+        f.write(f"mAP50: {results.box.map50}\n")
+        f.write(f"mAP75: {results.box.map75}\n")
+        f.write("mAP50-95 per category:\n")
+    print(f"Metrics saved to {metrics_file}")
