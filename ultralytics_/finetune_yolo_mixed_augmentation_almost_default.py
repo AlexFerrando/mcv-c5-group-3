@@ -22,7 +22,7 @@ if __name__ == "__main__":
         data=config_dataset_path,
         classes=consts.YOLO_CLASSES,
         
-        epochs=30,
+        epochs=100,
         optimizer="Adam",
         freeze=23,
         
@@ -38,13 +38,13 @@ if __name__ == "__main__":
         crop_fraction=1.0,
         # auto_augment='autoaugment'
         
-        patience=10,
-        lr0=0.01,
+        patience=30,
+        lr0=0.005,
         batch=16,
         save_period=50,
         
         plots=True,
-        device='0',
+        device='cuda',
         project=args.output_path,
         name=f"defaultAugmentation freezed23",
     )
