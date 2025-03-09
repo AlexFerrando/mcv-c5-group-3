@@ -20,7 +20,12 @@ if __name__ == "__main__":
     add_wandb_callback(model, enable_model_checkpointing = True)
     model.train(
         data=config_dataset_path,
+        classes=consts.YOLO_CLASSES,
+        
         epochs=30,
+        optimizer="Adam",
+        
+        
         hsv_h=0.0,
         hsv_s=0.0,
         hsv_v=0.0,
@@ -31,10 +36,13 @@ if __name__ == "__main__":
         erasing=0.0,
         crop_fraction=1.0,
         # auto_augment='autoaugment'
+        
         patience=10,
-        lr0=0.1,
+        lr0=0.01,
         batch=16,
         save_period=50,
+        
+        plots=True,
         device='0',
         project=args.output_path,
         name=f"yolo11n noAugmentation 30 epochs 0.1lr0",
