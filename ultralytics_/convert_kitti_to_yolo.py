@@ -100,12 +100,10 @@ def convert_kitti_to_yolo(kitti_anno_dir, output_dir, training_sequences, valida
                             dst_file_path = os.path.join(output_dir_images, new_file_name)
                             os.makedirs(os.path.dirname(dst_file_path), exist_ok=True)
                             shutil.copy(src_file_path, dst_file_path)
-                            # print(f"Copied {src_file_path} to {dst_file_path}")
 
     # Call the function for training and validation sequences
     process_kitti_annotations(kitti_anno_dir, output_dir, training_sequences, copy_images, "training")
     process_kitti_annotations(kitti_anno_dir, output_dir, validation_sequences, copy_images, "validation")
-    # process_kitti_annotations(kitti_anno_dir, output_dir, training_sequences + validation_sequences, copy_images, "all")
 
 
 if __name__ == "__main__":
@@ -113,11 +111,11 @@ if __name__ == "__main__":
     # kitti_dir_input = "/projects/master/c5/KITTI_MOTS/instances_txt"
     # kitti_dir_output = "/projects/master/c5/test/KITTI_MOTS_YOLO"
 
-    training_sequences = [str(sequence).zfill(4) for sequence in list(range(0, 16))]
-    validation_sequences = [str(sequence).zfill(4) for sequence in list(range(16, 21))]
+    training_sequences = []
+    validation_sequences = [str(sequence).zfill(4) for sequence in list(range(0, 21))]
     
     convert_kitti_to_yolo(kitti_anno_dir = kitti_dir_input,
-                          output_dir = consts.PATH_KITTI_MOTS_YOLO,
+                          output_dir = consts.PATH_KITTI_MOTS_YOLO_ALL,
                           training_sequences = training_sequences,
                           validation_sequences = validation_sequences,
                           copy_images = True)
