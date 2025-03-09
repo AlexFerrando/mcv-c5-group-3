@@ -24,6 +24,7 @@ if __name__ == "__main__":
         
         epochs=30,
         optimizer="Adam",
+        freeze=23,
         
         
         hsv_h=0.0,
@@ -45,5 +46,5 @@ if __name__ == "__main__":
         plots=True,
         device='0',
         project=args.output_path,
-        name=f"mixedAugmentation",
+        name=f"mixedAugmentation freezed23",
     )
