@@ -32,4 +32,10 @@ if __name__ == "__main__":
         f.write(f"mAP50: {results.box.map50}\n")
         f.write(f"mAP75: {results.box.map75}\n")
         f.write("mAP50-95 per category:\n")
+        f.write(f"    person: {results.box.maps[0]}\n")
+        f.write(f"    car: {results.box.maps[2]}\n")
+        f.write("\n\n")
+        f.write("    All categories:\n")
+        f.write(f"    {results.box.maps}\n")
+        
     print(f"Metrics saved to {metrics_file}")
