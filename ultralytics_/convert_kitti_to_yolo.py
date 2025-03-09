@@ -108,14 +108,14 @@ def convert_kitti_to_yolo(kitti_anno_dir, output_dir, training_sequences, valida
 
 if __name__ == "__main__":
     kitti_dir_input = "/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS/instances_txt"
-    # kitti_dir_input = "/projects/master/c5/KITTI_MOTS/instances_txt"
+    kitti_dir_input = "/projects/master/c5/KITTI-MOTS-big/instances_txt"
     # kitti_dir_output = "/projects/master/c5/test/KITTI_MOTS_YOLO"
 
-    training_sequences = []
-    validation_sequences = [str(sequence).zfill(4) for sequence in list(range(0, 21))]
+    training_sequences = [str(sequence).zfill(4) for sequence in list(range(0, 16))]
+    validation_sequences = [str(sequence).zfill(4) for sequence in list(range(16, 21))]
     
     convert_kitti_to_yolo(kitti_anno_dir = kitti_dir_input,
-                          output_dir = consts.PATH_KITTI_MOTS_YOLO_ALL,
+                          output_dir = consts.PATH_KITTI_MOTS_YOLO_LOCAL,
                           training_sequences = training_sequences,
                           validation_sequences = validation_sequences,
                           copy_images = True)
