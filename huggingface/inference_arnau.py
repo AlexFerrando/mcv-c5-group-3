@@ -186,9 +186,9 @@ if __name__ == '__main__':
     #DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
     DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'    
     
-    videos = os.listdir(DATASET_PATH + '/training/image_02')
-    
-    model, image_processor, device = load_model()
+    videos = os.listdir(DATASET_PATH + '/training/image_01')
+    model_folder = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/huggingface/checkpoint-5770'
+    model, image_processor, device = load_model(model_name=model_folder)
 
     # Iterar sobre los videos
     for video in tqdm(videos, desc="Processing videos", unit="video"):
