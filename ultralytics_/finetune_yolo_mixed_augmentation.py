@@ -45,5 +45,5 @@ if __name__ == "__main__":
         plots=True,
         device='0',
         project=args.output_path,
-        name=f"yolo11n noAugmentation 30 epochs 0.1lr0",
+        name=f"mixedAugmentation",
     )
