@@ -37,14 +37,14 @@ if __name__ == "__main__":
         crop_fraction=1.0,
         # auto_augment='autoaugment'
         
-        patience=10,
+        patience=20,
         warmup_epochs=6,
-        lr0=0.00005,
+        lr0=0.00001,
         batch=16,
         save_period=50,
         
         plots=False,
-        device='0',
+        device='cuda',
         project=args.output_path,
         name=f"noAugmentation freezed23",
     )
