@@ -66,13 +66,7 @@ Below we show some example frames of our models running inference in the KITTI-M
 ### Task D: Evaluate pre-trained Faster R-CNN, DeTR and YOLOv(>8) on KITTIMOTS dataset
 To evaluate and compare the performance of the different models tested we will us the Average Precision at IoU 0.5 (AP@0.5).
 
-The Intersection over Union (IoU) at threshold 0.5 is computed as IoU = (area of overlap) / (area of union), where:
-- `A` is the predicted bounding box,
-- `B` is the ground-truth bounding box,
-- `∩` represents the intersection area of the two boxes,
-- `∪` represents the union area of the two boxes.
-
-A prediction is considered correct if `IoU ≥ 0.5`.
+The Intersection over Union (IoU) at threshold 0.5 is computed as IoU = (area of overlap) / (area of union), and a prediction is considered correct if `IoU ≥ 0.5`.
 
 We evaluated the models using the pre-trained or off the shelf Faster R-CNN, DeTR, and YOLO models on the KITTI-MOTS dataset.
 
