@@ -182,7 +182,7 @@ The number of epochs is significantly higher that in the KITTI-MOTS fine-tuning 
 The final detection results are presented in the plot below:
 
 <p align="center">
-    <img src="assets/imgs_week1/map0.5_finetuning.png" width="700"/>
+    <img src="assets/imgs_week1/fine-tuning_domain_shift.png" width="700"/>
 </p>
 
 Increasing even further the number of training epochs probably would have imporoved the detection results, but given the short amount of time we couldn't test it.
