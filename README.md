@@ -162,6 +162,17 @@ This plot compares the performance of three object detection models—DeTR, Fast
 
 
 ### Task F:  Fine-tune either Faster R-CNN and DeTR on Different Dataset
+For the fine-tuning in a differnt domain, we have decided to fine-tune DeTR on the dataset CPPE-5: Medical Personal Protective Equipment Dataset. It contains 5 different classes: {Coverall, Face shield, Glove, Mask, Goggles} and 1000 annotated images with corresponding bounding boxes. For the training and validation, we have splitted this dataset randomly following the usual 80%-20% split.
+
+The fine-tuning strategy that we have used is the same as we followed for the fine-tuning with KITTI-MOTS dataset, replacing the last classification layer and adapting it to our dataset: 5 classes + “N/A” class. The hyperparameters used used during the training are presented below:
+
+- **Learning rate**: `1e-5`  
+- **Weight decay**: `1e-4`
+- **Learning rate scheduler**: `'cosine'`  
+- **Training duration**: `75 epochs`  
+
+The number of epochs is significantly higher that in the KITTI-MOTS fine-tuning because of the increased complexity of the dataset (4 more classes) and also the reduces number of training samples.
+
 
 ## Team 5
 - Alex Ferrando ([email](mailto:alexferrando15@gmail.com)) 
