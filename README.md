@@ -166,6 +166,11 @@ This plot compares the performance of three object detection models—DeTR, Fast
   - Consistently records the lowest scores across all metrics (e.g., mAP@0.5: 0.720, AP@0.5 Car: 0.765, AP@0.5 Pedestrian: 0.676).  
   - No noticeable performance gains from fine-tuning, suggesting potential limitations in its architecture or training process.  
 
+Finally, for completness, we show the main qualitative example the can be visualized in the detections of the videos. The persons sitting on a terrace or cycling, that were detected when running the models off-the-shelf, are no longer detected after fine-tuning, since they are not pedestrians. This particular example shown below, belongs to inference runed with Faster R-CNN.
+
+<p align="center">
+    <img src="assets/imgs_week1/qualitative_FT_rcnn.png" width="700"/>
+</p>
 
 ### Task F:  Fine-tune either Faster R-CNN and DeTR on Different Dataset
 For the fine-tuning in a differnt domain, we have decided to fine-tune DeTR on the dataset CPPE-5: Medical Personal Protective Equipment Dataset. It contains 5 different classes: {Coverall, Face shield, Glove, Mask, Goggles} and 1000 annotated images with corresponding bounding boxes. For the training and validation, we have splitted this dataset randomly following the usual 80%-20% split.
