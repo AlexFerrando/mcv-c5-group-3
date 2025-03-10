@@ -40,11 +40,86 @@ We ran inference using pre-trained Faster R-CNN, DeTR, and YOLO models on the KI
 
 *   **Environment Setup:** We used as suggested by the teachers Hugging Face for DeTR, Ultralytics for YOLO and Detectron2 for Faster R-CNN.
 *   **Model Loading:**  Pre-trained weights were downloaded from the Hugging Face Hub, downloaded from ultralytics of from the already built-in Detetron2 methods, here and in the following tasks.
-*   **Inference Execution:**  Inference was performed using scripts located in [`inference.py`](https://github.com/AlexFerrando/mcv-c5-group-3/blob/main/huggingface/inference.py) for DeTR, [`inference.py`](https://github.com/AlexFerrando/mcv-c5-group-3/blob/main/ultralytics_/inference.py) for YOLO11n and [`task_c.py`](https://github.com/AlexFerrando/mcv-c5-group-3/blob/main/detectron2/task_c.py). 
+*   **Inference Execution:**  Inference was performed using scripts located in [`inference.py`](/mcv-c5-group-3/huggingface/inference.py), [`inference.py`](/mcv-c5-group-3/ultralytics_/inference.py) and [`task_c.py`](/mcv-c5-group-3/detectron2/task_c.py).  Example command-line usage for each model is shown below:
+    *   **DeTR:**
+        ```bash
+        python inference/inference.py
+        ```
+        
+---
 
-
+TODO: ADD SOME GIFS OF THE RESULTS!
 
 ### Task D: Evaluate pre-trained Faster R-CNN, DeTR and YOLOv(>8) on KITTIMOTS dataset
+To evaluate and compare the performance of the different models tested we will us the Average Precision at IoU 0.5 (AP@0.5).
+
+The Intersection over Union (IoU) at threshold 0.5 is computed as IoU = (area of overlap) / (area of union), where:
+- `A` is the predicted bounding box,
+- `B` is the ground-truth bounding box,
+- `∩` represents the intersection area of the two boxes,
+- `∪` represents the union area of the two boxes.
+
+A prediction is considered correct if `IoU ≥ 0.5`.
+
+We evaluated the models using the pre-trained or off the shelf Faster R-CNN, DeTR, and YOLO models on the KITTI-MOTS dataset.
+
+To evaluate **DeTR** the steps to follow are:
+1. **Run inference**  
+   - Execute the [`inference.py`](/mcv-c5-group-3/huggingface/inference.py) script to generate predictions on the KITTI-MOTS dataset using the pre-trained **DeTR** model. This script will output the predicted bounding boxes, segmentation masks, and class labels for each image in the dataset.
+
+2. **Obtain ground truth annotations**  
+   - Use [`get_ground_truth.py`](/mcv-c5-group-3/huggingface/get_ground_truth.py) to extract the ground truth labels from the KITTI-MOTS dataset. This ensures that we have the correct bounding boxes and segmentation masks to compare against the model's predictions.
+
+3. **Evaluate the model**  
+   - Run [`coco_eval.py`](/mcv-c5-group-3/huggingface/coco_eval.py) to compare the model's predictions with the ground truth annotations using standard COCO evaluation metrics. This script computes the key performance metrics needed to evaluate the model.
+
+---
+
+To evaluate **Faster R-CNN**, follow this step:
+
+1. **Run `task_d.py`** file:
+   - Execute [`task_d.py`](/mcv-c5-group-3/detectron2/task_d.py) to evaluate the **Faster R-CNN** model on the KITTI-MOTS dataset. This script initializes the model, loads the dataset, and computes evaluation metrics such as **AP@0.5** using COCO evaluation metrics.  
+
+Internally, `task_d.py` performs the following:  
+- Registers the KITTI-MOTS dataset for evaluation.  
+- Loads the pre-trained **Faster R-CNN** model.  
+- Uses the **COCOEvaluator** to compute AP and IoU scores.  
+- Outputs the evaluation results.
+
+---
+
+### Evaluation Steps for **YOLO**  
+
+To evaluate **YOLO**, follow this step:
+
+1. **Run `evaluation.py`**  
+   - Execute [`evaluation.py`](/mcv-c5-group-3/ultralytics_/evaluation.py) to evaluate the **YOLO** model on the KITTI-MOTS dataset.  
+   - This script loads the **pre-trained YOLO model**, performs inference on the dataset, and computes key evaluation metrics.  
+
+Internally, `evaluation.py` performs the following:  
+- Loads the pre-trained **YOLO** model from the specified path.  
+- Runs inference on the **validation** set (`split="val"`) using the **KITTI-MOTS YOLO configuration**.  
+- Computes **mAP (Mean Average Precision) at IoU thresholds (AP@0.5, AP@0.75, AP@0.5:0.95)**.  
+- Saves evaluation metrics (precision, recall, F1-score) to an output file for analysis.  
+
+---
+
+### Evaluation Results  
+
+The table below presents the **Mean Average Precision (mAP)** results at different IoU thresholds (**AP@0.5**) for each model:
+
+| Model        | mAP@0.5 | mAP@0.5 (Car) | mAP@0.5 (Pedestrian) |
+|-------------|--------------|---------------|---------------------|
+| **DeTR**    | 0.725       | 0.809         | 0.559               |
+| **Faster R-CNN** | 0.791  | 0.853         | 0.607               |
+| **YOLO**    | 0.720       | 0.765         | 0.676               |
+
+**Key Takeaways:**  
+- **Faster R-CNN** achieved the highest **overall mAP@0.5** (**0.853**), performing best on the **Car** category.  
+- **YOLO** performed better than **DeTR** for detecting **Pedestrians** but had lower mAP for **Cars** compared to **Faster R-CNN**.  
+- **DeTR** had the lowest mAP for **Pedestrians** but showed competitive performance for **Cars**.  
+
+---
 
 ### Task E: Fine-tune Faster R-CNN, DeTR and YOLO on KITTI-MOTS.
 
