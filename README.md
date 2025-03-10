@@ -23,7 +23,9 @@ Team 3 repository of the [C5 - Visual Recognition](https://mcv.uab.cat/c5-visual
     - Each model code is divided into its own folder [detectron2](/mcv-c5-group-3/detectron2/), [huggingface](/mcv-c5-group-3/huggingface/) and [ultralytics_](/mcv-c5-group-3/ultralytics_/).
 
 ## Week 1
-Week 1 focused on object detection.  This section details our efforts in inference, training, and validation of three prominent deep learning models:
+Week 1 focused on object detection. The summary slides of our work during this week can be found [here](https://docs.google.com/presentation/d/1RshITh9NvEmbJ8ndc5DF7OZFQ5BvnOvzYS6pJQe3nA0/edit#slide=id.g31bab77bdae_0_0):
+
+This section details our efforts in inference, training, and validation of three prominent deep learning models:
 
 *   **Faster R-CNN**
 *   **DeTR**
