@@ -72,8 +72,6 @@ To evaluate **DeTR** the steps to follow are:
 3. **Evaluate the model**  
    - Run [`coco_eval.py`](/mcv-c5-group-3/huggingface/coco_eval.py) to compare the model's predictions with the ground truth annotations using standard COCO evaluation metrics. This script computes the key performance metrics needed to evaluate the model.
 
----
-
 To evaluate **Faster R-CNN**, follow this step:
 
 1. **Run `task_d.py`** file:
@@ -83,9 +81,7 @@ Internally, `task_d.py` performs the following:
 - Registers the KITTI-MOTS dataset for evaluation.  
 - Loads the pre-trained **Faster R-CNN** model.  
 - Uses the **COCOEvaluator** to compute AP and IoU scores.  
-- Outputs the evaluation results.
-
----  
+- Outputs the evaluation results.  
 
 Finally, to evaluate **YOLO**, follow this step:
 
@@ -98,8 +94,6 @@ Internally, `evaluation.py` performs the following:
 - Runs inference on the **validation** set (`split="val"`) using the **KITTI-MOTS YOLO configuration**.  
 - Computes **mAP (Mean Average Precision) at IoU thresholds (AP@0.5, AP@0.75, AP@0.5:0.95)**.  
 - Saves evaluation metrics (precision, recall, F1-score) to an output file for analysis.  
-
----
 
 ### Evaluation Results  
 
@@ -136,6 +130,20 @@ For **Fast R-CNN**, we also performed albumentations and fine-tuned to obtain th
 - **Images per batch**: `2`  
 - **Batch size**: `164`  
 - **Max iterations**: `'600'`  
+
+On the other hand, the fine-tuning with **YOLO11n** did not lead to the expected results.  
+
+- **Unexpected degradation in the first iteration** significantly reduced the model's performance compared to the off-the-shelf evaluation.  
+- **Reducing the learning rate** helped mitigate this issue but did not fully resolve it.  
+- We experimented with different settings and were **surprised to find that YOLO's default augmentations were already highly effective**.  
+- **Tweaking the augmentations actually decreased performance**, rather than improving it.  
+
+Upon **visual inspection**, the degradation was not as severe as initially expected.
+
+### Off-the-Shelf vs. Fine-Tuned Performance
+<p align="center">
+    <img src="assets/imgs_week1/map0.5_finetuning.png" width="700"/>
+</p>
 
 
 ### Task F:  Fine-tune either Faster R-CNN and DeTR on Different Dataset
