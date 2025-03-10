@@ -185,9 +185,6 @@ The final detection results are presented in the plot below:
     <img src="assets/imgs_week1/fine-tuning_domain_shift.png" width="700"/>
 </p>
 
-Increasing even further the number of training epochs probably would have imporoved the detection results, but given the short amount of time we couldn't test it.
-
-
 ## Team 5
 - Alex Ferrando ([email](mailto:alexferrando15@gmail.com)) 
 - Pol Rosinés ([email](mailto:polrosines@gmail.com))
