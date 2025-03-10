@@ -40,15 +40,14 @@ We ran inference using pre-trained Faster R-CNN, DeTR, and YOLO models on the KI
 
 *   **Environment Setup:** We used as suggested by the teachers Hugging Face for DeTR, Ultralytics for YOLO and Detectron2 for Faster R-CNN.
 *   **Model Loading:**  Pre-trained weights were downloaded from the Hugging Face Hub, downloaded from ultralytics of from the already built-in Detetron2 methods, here and in the following tasks.
-*   **Inference Execution:**  Inference was performed using scripts located in [`inference.py`](/mcv-c5-group-3/huggingface/inference.py), [`inference.py`](/mcv-c5-group-3/ultralytics_/inference.py) and [`task_c.py`](/mcv-c5-group-3/detectron2/task_c.py).  Example command-line usage for each model is shown below:
-    *   **DeTR:**
-        ```bash
-        python inference/inference.py
-        ```
-        
----
+*   **Inference Execution:**  Inference was performed using scripts located in [`inference.py`](https://github.com/AlexFerrando/mcv-c5-group-3/blob/main/huggingface/inference.py) for DeTR, [`inference.py`](https://github.com/AlexFerrando/mcv-c5-group-3/blob/main/ultralytics_/inference.py) for YOLO11n and [`task_c.py`](https://github.com/AlexFerrando/mcv-c5-group-3/blob/main/detectron2/task_c.py). 
 
-TODO: ADD SOME GIFS OF THE RESULTS!
+Below we show some example frames of our models running inference in the KITTI-MOTTS dataset:
+
+![DeTR](https://github.com/AlexFerrando/mcv-c5-group-3/blob/main/assets/imgs_week1/DeTR_example.png)
+![Faster R-CNN](https://github.com/AlexFerrando/mcv-c5-group-3/blob/main/assets/imgs_week1/R-CNN_example.png)
+![YOLO11n](https://github.com/AlexFerrando/mcv-c5-group-3/blob/main/assets/imgs_week1/YOLO_example.png)
+
 
 ### Task D: Evaluate pre-trained Faster R-CNN, DeTR and YOLOv(>8) on KITTIMOTS dataset
 To evaluate and compare the performance of the different models tested we will us the Average Precision at IoU 0.5 (AP@0.5).
