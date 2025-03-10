@@ -121,6 +121,24 @@ The table below presents the **Mean Average Precision (mAP)** results at differe
 
 ### Task E: Fine-tune Faster R-CNN, DeTR and YOLO on KITTI-MOTS.
 
+To improve the performance of the models, we fine-tuned them on the **KITTI-MOTS** dataset. The goal was to adapt the models better to the dataset-specific characteristics and enhance detection accuracy.  
+
+Fine-tuning **DeTR**  
+
+For **DeTR**, we fine-tuned the **last layer of the Feed-Forward Network (FFN) in the prediction head**. The best-performing hyperparameters were:  
+
+- **Learning rate**: `5e-5`  
+- **Weight decay**: `1e-4`  
+- **Learning rate scheduler**: `'cosine'`  
+- **Training duration**: `10 epochs`  
+
+For **Fast R-CNN**, we also performed albumentations and fine-tuned to obtain the following best-performing hyperparameters:
+
+- **Images per batch**: `2`  
+- **Batch size**: `164`  
+- **Max iterations**: `'600'`  
+
+
 ### Task F:  Fine-tune either Faster R-CNN and DeTR on Different Dataset
 
 ## Team 5
