@@ -144,6 +144,19 @@ Upon **visual inspection**, the degradation was not as severe as initially expec
 <p align="center">
     <img src="assets/imgs_week1/map0.5_finetuning.png" width="700"/>
 </p>
+This plot compares the performance of three object detection models—DeTR, Fast R-CNN, and YOLOv11n—on mAP@0.5 and AP@0.5 for different object classes (Cars and Pedestrians). The bars represent the final scores, while the black dashed lines indicate improvements after fine-tuning.
+
+- **DeTR outperforms other models in accuracy and fine-tuning gains**  
+  - Achieves the highest scores across all metrics, especially in AP@0.5 for Pedestrians (0.899) and Cars (0.957).  
+  - Shows the largest post-fine-tuning improvements, particularly in pedestrian detection (+0.340).  
+
+- **Fast R-CNN performs well but has smaller improvements**  
+  - Competitive performance, reaching 0.946 AP@0.5 for Cars.  
+  - Fine-tuning provides moderate improvements, with a +0.257 increase for pedestrian detection.  
+
+- **YOLOv11n is stable but underperforms relative to other models**  
+  - Consistently records the lowest scores across all metrics (e.g., mAP@0.5: 0.720, AP@0.5 Car: 0.765, AP@0.5 Pedestrian: 0.676).  
+  - No noticeable performance gains from fine-tuning, suggesting potential limitations in its architecture or training process.  
 
 
 ### Task F:  Fine-tune either Faster R-CNN and DeTR on Different Dataset
