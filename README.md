@@ -86,11 +86,9 @@ Internally, `task_d.py` performs the following:
 - Uses the **COCOEvaluator** to compute AP and IoU scores.  
 - Outputs the evaluation results.
 
----
+---  
 
-### Evaluation Steps for **YOLO**  
-
-To evaluate **YOLO**, follow this step:
+Finally, to evaluate **YOLO**, follow this step:
 
 1. **Run `evaluation.py`**  
    - Execute [`evaluation.py`](/mcv-c5-group-3/ultralytics_/evaluation.py) to evaluate the **YOLO** model on the KITTI-MOTS dataset.  
