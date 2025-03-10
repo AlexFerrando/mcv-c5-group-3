@@ -46,9 +46,21 @@ We ran inference using pre-trained Faster R-CNN, DeTR, and YOLO models on the KI
 
 Below we show some example frames of our models running inference in the KITTI-MOTTS dataset:
 
-![DeTR](https://github.com/AlexFerrando/mcv-c5-group-3/blob/main/assets/imgs_week1/DeTR_example.png)
-![Faster R-CNN](https://github.com/AlexFerrando/mcv-c5-group-3/blob/main/assets/imgs_week1/R-CNN_example.png)
-![YOLO11n](https://github.com/AlexFerrando/mcv-c5-group-3/blob/main/assets/imgs_week1/YOLO_example.png)
+
+#### DeTR
+<p align="center">
+    <img src="assets/imgs_week1/DeTR_example.png" width="700"/>
+</p>
+
+#### Faster R-CNN
+<p align="center">
+    <img src="assets/imgs_week1/R-CNN_example.png" width="700"/>
+</p>
+
+#### YOLO11n
+<p align="center">
+    <img src="assets/imgs_week1/YOLO_example.png" width="700"/>
+</p>
 
 
 ### Task D: Evaluate pre-trained Faster R-CNN, DeTR and YOLOv(>8) on KITTIMOTS dataset
