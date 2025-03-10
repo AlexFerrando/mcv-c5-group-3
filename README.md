@@ -53,12 +53,12 @@ Below we show some example frames of our models running inference in the KITTI-M
 </p>
 
 #### Faster R-CNN
-<p align="center">
+<p >
     <img src="assets/imgs_week1/R-CNN_example.png" width="700"/>
 </p>
 
 #### YOLO11n
-<p align="center">
+<p >
     <img src="assets/imgs_week1/YOLO_example.png" width="700"/>
 </p>
 
@@ -183,7 +183,15 @@ The fine-tuning strategy that we have used is the same as we followed for the fi
 - **Learning rate scheduler**: `'cosine'`  
 - **Training duration**: `75 epochs`  
 
-The number of epochs is significantly higher that in the KITTI-MOTS fine-tuning because of the increased complexity of the dataset (4 more classes) and also the reduces number of training samples.
+The number of epochs is significantly higher that in the KITTI-MOTS fine-tuning because of the increased complexity of the dataset (4 more classes) and also the reduces number of training samples. 
+
+The final detection results are presented in the plot below:
+
+<p align="center">
+    <img src="assets/imgs_week1/map0.5_finetuning.png" width="700"/>
+</p>
+
+Increasing even further the number of training epochs probably would have imporoved the detection results, but given the short amount of time we couldn't test it.
 
 
 ## Team 5
