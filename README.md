@@ -48,7 +48,7 @@ Below we show some example frames of our models running inference in the KITTI-M
 
 
 #### DeTR
-<p align="center">
+<p >
     <img src="assets/imgs_week1/DeTR_example.png" width="700"/>
 </p>
 
