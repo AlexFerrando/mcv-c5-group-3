@@ -8,8 +8,7 @@ import matplotlib.pyplot as plt
 from consts import DetectionResults
 from PIL import Image
 from transformers import AutoImageProcessor, Mask2FormerImageProcessor, Mask2FormerForUniversalSegmentation
-from transformers.models.mask2former.modeling_mask2former import Mask2FormerForUniversalSegmentationOutput
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Dict
 from read_data import VideoDataset
 from tqdm import tqdm
 
@@ -79,7 +78,7 @@ def run_instance_segmentation(
 
 def visualize_prediction(
         image: Image.Image,
-        predictions: Mask2FormerForUniversalSegmentationOutput
+        predictions: Dict
     ):
 
     raise NotImplementedError("This function is not implemented yet.")
