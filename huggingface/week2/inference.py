@@ -2,16 +2,19 @@ import consts
 import torch
 import torch.nn as nn
 import os
+import numpy as np
+import matplotlib.pyplot as plt
 
 from consts import DetectionResults
 from PIL import Image
-from transformers import AutoImageProcessor, Mask2FormerModel, Mask2FormerImageProcessor
+from transformers import AutoImageProcessor, Mask2FormerImageProcessor, Mask2FormerForUniversalSegmentation
+from transformers.models.mask2former.modeling_mask2former import Mask2FormerForUniversalSegmentationOutput
 from typing import List, Tuple, Union
 from read_data import VideoDataset
 from tqdm import tqdm
 
 
-def load_model(model_name: str = consts.MASK2FORMER) -> Tuple[Mask2FormerModel, Mask2FormerImageProcessor]:
+def load_model(model_name: str = consts.MASK2FORMER) -> Tuple[Mask2FormerForUniversalSegmentation, Mask2FormerImageProcessor]:
     """
     Load model, processor, and determine device.
     
@@ -23,14 +26,14 @@ def load_model(model_name: str = consts.MASK2FORMER) -> Tuple[Mask2FormerModel, 
     """
 
     image_processor = AutoImageProcessor.from_pretrained(model_name)
-    model = Mask2FormerModel.from_pretrained(model_name)
+    model = Mask2FormerForUniversalSegmentation.from_pretrained(model_name)
     
     return model, image_processor
 
 
 
 def run_instance_segmentation(
-        model: Mask2FormerModel, 
+        model: Mask2FormerForUniversalSegmentation, 
         image_processor: Mask2FormerImageProcessor, 
         images: Union[Image.Image, List[Image.Image]], 
         device: torch.device
@@ -60,21 +63,26 @@ def run_instance_segmentation(
         outputs = model.forward(**inputs.to(device))
 
     # Crear el tensor de target_sizes
-    img_size = torch.tensor([images[0].size[1], images[0].size[0]], dtype=torch.float32)
+    img_size = torch.tensor([images[0].size[1], images[0].size[0]], dtype=torch.int32)  # Use int32 here
     target_sizes = img_size.repeat(len(images), 1).to(device)
 
     # Perform post-processing to get instance segmentation map
     pred_instance_map = image_processor.post_process_instance_segmentation(
-        outputs, target_sizes=target_sizes
+        outputs, target_sizes=[tuple(size.tolist()) for size in target_sizes]  # Ensure it's a tuple of ints
     )[0]
 
     results = pred_instance_map
     # Filter the detection to get only the desired ones: 'car' (id=3 in DeTR) and 'person' (id=1 in DeTR)
     # Post process results to get apropiate format
-    print(results)
             
     return results
 
+def visualize_prediction(
+        image: Image.Image,
+        predictions: Mask2FormerForUniversalSegmentationOutput
+    ):
+
+    raise NotImplementedError("This function is not implemented yet.")
 
 
 if __name__ == '__main__':
@@ -90,7 +98,7 @@ if __name__ == '__main__':
     # Load model
     model, image_processor = load_model()
     data_loader = VideoDataset(DATASET_PATH)
-    
+
     for video in tqdm(videos, desc="Processing videos", unit="video"):
         
         video_data = data_loader.load_video(video)
@@ -100,6 +108,10 @@ if __name__ == '__main__':
         for i in tqdm(range(0, len(frames), batch_size)):
             batch_frames = frames[i:i + batch_size]
             predictions = run_instance_segmentation(model, image_processor, batch_frames, device='cuda')
+            
+            # Visualize predictions
+            for j, frame in enumerate(batch_frames):
+                visualize_prediction(frame, predictions[j])
 
     print("Instance segmentation with Mask2Former off-the-shelf finished!")
 
