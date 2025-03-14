@@ -2,7 +2,6 @@ import consts
 import torch
 import torch.nn as nn
 import os
-import random
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -13,6 +12,9 @@ from typing import List, Tuple, Union, Dict
 from read_data import VideoDataset
 from tqdm import tqdm
 import cv2
+
+import json
+from pycocotools import mask as mask_util
 
 
 CONFIG = Mask2FormerConfig.from_pretrained(consts.MASK2FORMER)
@@ -95,11 +97,88 @@ def run_instance_segmentation(
     target_sizes = img_size.repeat(len(images), 1).to(device)
 
     # Perform post-processing to get instance segmentation map
-    pred_instance_map = image_processor.post_process_instance_segmentation(
-        outputs, target_sizes=[tuple(size.tolist()) for size in target_sizes]  # Ensure it's a tuple of ints
+    predictions = image_processor.post_process_instance_segmentation(
+        outputs, 
+        target_sizes=[tuple(size.tolist()) for size in target_sizes]  # Ensure it's a tuple of ints
     )
 
-    return keep_only_interesting_classes(pred_instance_map)
+    # Filter the predictions so we only have class 'car' and 'person'
+    filtered_predictions = keep_only_interesting_classes(predictions)
+
+    return filtered_predictions
+
+def save_predictions(predictions, video_name: str, output_dir: str, batch_start_idx: int=0):
+    """
+    Convierte predicciones de Mask2Former a formato COCO RLE y las guarda en un archivo JSON.
+    
+    Args:
+        predictions: Lista de predicciones para un batch de frames
+        video_name: Nombre del video
+        batch_start_idx: Índice del primer frame en el batch
+        output_dir: Directorio para guardar los archivos
+    """
+    
+    os.makedirs(output_dir, exist_ok=True)
+    output_file = os.path.join(output_dir, f"preds_coco_{video_name}.json")
+    
+    # Cargar predicciones existentes o crear nueva lista
+    if os.path.exists(output_file):
+        with open(output_file, 'r') as f:
+            coco_predictions = json.load(f)
+    else:
+        coco_predictions = []
+    
+    # Procesar cada frame en el batch
+    for batch_idx, frame_pred in enumerate(predictions):
+        image_id = batch_start_idx + batch_idx
+        
+        # Extraer máscaras, clases y puntuaciones
+        pred_masks = frame_pred['pred_masks'] 
+        pred_classes = frame_pred['pred_classes']
+        pred_scores = frame_pred['pred_scores']
+        
+        # Procesar cada instancia detectada
+        for i in range(len(pred_scores)):
+            # Convertir máscara a numpy si es tensor
+            if isinstance(pred_masks[i], torch.Tensor):
+                mask_np = pred_masks[i].cpu().numpy().astype(np.uint8)
+            else:
+                mask_np = pred_masks[i].astype(np.uint8)
+            
+            # Convertir a RLE
+            rle = mask_util.encode(np.asfortranarray(mask_np))
+            rle['counts'] = rle['counts'].decode('utf-8')  # Convertir bytes a string
+            
+            # Calcular bbox
+            bbox = mask_util.toBbox(rle).tolist()  # [x, y, width, height]
+            
+            # Obtener category_id y score
+            if isinstance(pred_classes[i], torch.Tensor):
+                category_id = int(pred_classes[i].item())
+            else:
+                category_id = int(pred_classes[i])
+                
+            if isinstance(pred_scores[i], torch.Tensor):
+                score = float(pred_scores[i].item())
+            else:
+                score = float(pred_scores[i])
+            
+            # Crear predicción COCO
+            coco_pred = {
+                'image_id': int(image_id),
+                'category_id': category_id,
+                'segmentation': rle,
+                'score': score,
+                'bbox': bbox
+            }
+            
+            coco_predictions.append(coco_pred)
+    
+    # Guardar en formato JSON
+    with open(output_file, 'w') as f:
+        json.dump(coco_predictions, f)
+    
+    print(f"Predicciones guardadas para el vídeo {video_name} en {output_file}")
 
 
 def visualize_prediction(
@@ -187,9 +266,15 @@ if __name__ == '__main__':
         frames = video_data['image']
         
         batch_size = 4
+        batch_number = 1
         for i in tqdm(range(0, len(frames), batch_size)):
+            
             batch_frames = frames[i:i + batch_size]
             predictions = run_instance_segmentation(model, image_processor, batch_frames, device=device)
+
+            output_dir = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/huggingface/week2/Evaluation_off-the-shelf/predictions'
+            save_predictions(predictions, video, output_dir=output_dir, batch_start_idx=i)
+            batch_number += 1
             
             # Visualize predictions
             for j, frame in enumerate(batch_frames):

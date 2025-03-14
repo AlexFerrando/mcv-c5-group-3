@@ -1,8 +1,10 @@
 # Dataset
 KITTI_MOTS
-huggingface/evaluation_results
+huggingface/week1/evaluation_results
+huggingface/week2/Evaluation_off-the-shelf
 jobs_pol/
 *.yaml
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
