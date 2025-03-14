@@ -6,8 +6,8 @@ from torch import Tensor
 KITTI_MOTS_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS/'
 KITTI_MOTS_PATH_ALEX = '/home/alex/Documents/MCV/C5/KITTI_MOTS/'
 
-# Model info
-MODEL_NAME = "facebook/detr-resnet-50"
+# Model info. Instance segmentation
+MASK2FORMER = "facebook/mask2former-swin-small-coco-instance"
 MAX_WIDTH_SIZE_KITTI = 1242
 MAX_HEIGHT_SIZE_KITTI = 376
 MAX_WIDTH_SIZE_CPPE5 = 480

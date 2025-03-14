@@ -2,7 +2,11 @@ from collections import defaultdict
 import os
 from typing import List, Dict, Optional
 from datasets import Dataset, DatasetDict, Features, Image as HFImage, Value, Sequence
-from pycocotools.mask import toBbox
+from pycocotools.mask import toBbox, decode
+import numpy as np
+from PIL import Image
+import matplotlib.pyplot as plt
+
 
 def load_video_frames(folder: str) -> List[str]:
     """Load sorted image paths from a video sequence folder."""
@@ -22,8 +26,15 @@ def load_video_frames(folder: str) -> List[str]:
 def decode_rle_mask(rle_mask: str, img_h: int, img_w: int):
     """Decode RLE mask into a bounding box (xcenter, ycenter, w, h)."""
     rle = {'size': [img_h, img_w], 'counts': rle_mask.encode('utf-8')}
-    x1, y1, w, h = tuple(toBbox(rle))  # Ensure `toBbox` is properly imported
-    return [x1, y1, x1 + w, y1 + h], h*w
+    mask_binary = decode(rle)  # 0s and 1s 
+    mask = np.array(mask_binary, dtype=np.uint8) * 255  # grayscale
+
+    # # Después de decodificar la máscara
+    # plt.imshow(mask, cmap="gray")
+    # plt.colorbar()
+    # plt.show()
+
+    return mask
 
 
 def load_images_and_annotations_for_video(
@@ -51,7 +62,8 @@ def load_images_and_annotations_for_video(
         "area": [],
         "track_id": [],
         "class_labels": [],
-        "boxes": [],
+        "mask": [],
+        "iscrowd": [],
     })
 
     if not os.path.exists(annotation_file):
@@ -80,7 +92,7 @@ def load_images_and_annotations_for_video(
             continue
 
         img_path = os.path.join(video_folder, f"{image_id:06d}.png")
-        bbox, area = decode_rle_mask(rle_mask, img_h, img_w)
+        mask = decode_rle_mask(rle_mask, img_h, img_w)
 
         frame_data = frames_info[image_id]
         frame_data["video"] = video_folder
@@ -89,8 +101,9 @@ def load_images_and_annotations_for_video(
         frame_data["orig_size"] = [img_h, img_w]
         frame_data["track_id"].append(track_id)
         frame_data["class_labels"].append(category_id)
-        frame_data["boxes"].append(bbox)
-        frame_data["area"].append(area)
+        frame_data["mask"].append(mask)
+        frame_data["iscrowd"].append(0)
+        #frame_data["area"].append(area)
 
     return dict(frames_info)
 
@@ -100,10 +113,10 @@ def load_images_and_annotations_for_video(
 def load_video(video_name: str):
     """Load image paths and corresponding annotation masks."""
 
-    #DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
-    DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
+    DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
+    #DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
 
-    image_folder = DATASET_PATH+f'/training/image_02/{video_name}'
+    image_folder = DATASET_PATH+f'/training/image_01/{video_name}'
     annotation_folder = DATASET_PATH+f'/instances_txt/{video_name}.txt'
 
     if not os.path.exists(image_folder):
@@ -112,7 +125,7 @@ def load_video(video_name: str):
         raise FileNotFoundError(f"Annotation folder not found: {annotation_folder}")
 
     dataset = {
-        "video": [], "image": [], "boxes": [], "track_id": [], "class_labels": [],
+        "video": [], "image": [], "mask": [], "track_id": [], "class_labels": [],
         "image_id": [], "orig_size": [], "area": [], "iscrowd": []
     }
 
@@ -122,7 +135,7 @@ def load_video(video_name: str):
     for frame_data in frame_to_mask.values():
         dataset["video"].append(frame_data["video"])
         dataset["image"].append(frame_data["image"])
-        dataset["boxes"].append(frame_data["boxes"])
+        dataset["mask"].append(frame_data["mask"])
         dataset["track_id"].append(frame_data["track_id"])
         dataset["class_labels"].append(frame_data["class_labels"])
         dataset["image_id"].append(frame_data["image_id"])
@@ -193,7 +206,7 @@ def get_train_features() -> Features:
         "image_id": Value("int32"),
         "track_id": Sequence(Value("int32")),
         "class_labels": Sequence(Value("int32")),
-        "boxes": Sequence(Sequence(Value("float32"))),  # List of bounding boxes
+        "mask": Sequence(Sequence(Value("float32"))),  # List of bounding boxes
         "orig_size": Sequence(Value("int32")),  # Alternative: Array(2, "int32")
         "area": Sequence(Value("float32")),  # Consistency with bbox
     })

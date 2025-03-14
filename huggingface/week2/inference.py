@@ -13,7 +13,7 @@ import json
 from tqdm import tqdm
 
 
-def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False) -> Tuple[torch.nn.Module, AutoImageProcessor]:
+def load_model(model_name: str = consts.MASK2FORMER, modified: bool = False) -> Tuple[torch.nn.Module, AutoImageProcessor]:
     """
     Load model, processor, and determine device.
     
@@ -24,8 +24,8 @@ def load_model(model_name: str = consts.MODEL_NAME, modified: bool = False) -> T
         Tuple containing model, image processor, and device
     """
 
-    image_processor = AutoImageProcessor.from_pretrained("facebook/mask2former-swin-small-coco-instance")
-    model = Mask2FormerModel.from_pretrained("facebook/mask2former-swin-small-coco-instance")
+    image_processor = AutoImageProcessor.from_pretrained(model_name)
+    model = Mask2FormerModel.from_pretrained(model_name)
     
     return model, image_processor
 
@@ -85,25 +85,25 @@ def run_instance_segmentation(
 
 if __name__ == '__main__':
 
-    #DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
-    DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
+    DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
+    #DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
 
     # Get video names
-    videos = os.listdir(DATASET_PATH+'/training/image_02')
+    videos = os.listdir(DATASET_PATH+'/training/image_01')
 
     # Load model
-    model, image_processor, device = load_model()
+    model, image_processor = load_model()
     
     for video in tqdm(videos, desc="Processing videos", unit="video"):
         
-        try:
-            dataset = load_video(video)
-        except:
+        if video == '.DS_Store':
             continue
+        else:
+            dataset = load_video(video)
         
         frames = dataset['image']
         
-        predictions = run_instance_segmentation(model, image_processor, frames, device)
+        predictions = run_instance_segmentation(model, image_processor, frames, device='cpu')
 
     print("Instance segmentation with Mask2Former off-the-shelf finished!")
 
