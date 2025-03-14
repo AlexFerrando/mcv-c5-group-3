@@ -15,27 +15,30 @@ def extract_yolo_annotations(ann_filepath):
 
     yolo_annotations = {}
     for obj in objs:
-        obj_info = obj.split(maxsplit=5)
-        timeframe_id, _, class_id, img_height, img_width = map(int, obj_info[:4])
+        obj_info = obj.split()
+        
         assert len(obj_info) == 6, f"Invalid object info: {obj_info}"
+        assert class_id in consts.KITTI2COCO, f"Unknown class ID: {class_id}"
+
+        timeframe_id, _, class_id, img_height, img_width = map(int, obj_info[:5])
+
         if class_id == 10:
             continue
-        
+
         rle_str = obj_info[5]
         rle = {
             'size': [img_height, img_width],
             'counts': rle_str
         }
-        assert class_id in consts.KITTI2COCO, f"Unknown class ID: {class_id}"
 
         decoded_mask = maskUtils.decode(rle)
         mask, _ = cv2.findContours(decoded_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
         assert len(mask) == 1, f"Invalid mask: {mask}"
+
         formatted_timeframe = f"{timeframe_id:06d}"
         if formatted_timeframe not in yolo_annotations:
             yolo_annotations[formatted_timeframe] = []
-        
+
         yolo_annotations[formatted_timeframe].append(polygon_to_yolo_str(mask[0] / [img_width, img_height], consts.KITTI2COCO[class_id]))
     return yolo_annotations
 
