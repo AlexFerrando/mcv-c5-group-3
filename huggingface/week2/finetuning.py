@@ -34,25 +34,27 @@ training_args = TrainingArguments(
     logging_steps=25,
 )
 
-video_dataset = VideoDataset(DATA_PATH)
-data = video_dataset.load_data()
-# data_dict = video_dataset.split_data(data) # In order to have train, test, and validation sets
-data_dict = data.train_test_split(test_size=0.2)
 
-model, image_processor = load_model()
+if __name__ == '__main__':
+    video_dataset = VideoDataset(DATA_PATH)
+    data = video_dataset.load_data()
+    # data_dict = video_dataset.split_data(data) # In order to have train, test, and validation sets
+    data_dict = data.train_test_split(test_size=0.2)
 
-train_transform = partial(transform, image_processor=image_processor)
+    model, image_processor = load_model()
 
-train_data = data_dict["train"].with_transform(train_transform)
-test_data = data_dict["test"].with_transform(train_transform)
+    train_transform = partial(transform, image_processor=image_processor)
 
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=train_data,
-    eval_dataset=test_data,
-    processing_class=image_processor,
-    data_collator=collate_fn,
-)
+    train_data = data_dict["train"].with_transform(train_transform)
+    test_data = data_dict["test"].with_transform(train_transform)
 
-trainer.train()
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_data,
+        eval_dataset=test_data,
+        processing_class=image_processor,
+        data_collator=collate_fn,
+    )
+
+    trainer.train()
