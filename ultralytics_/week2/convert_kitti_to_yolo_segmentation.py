@@ -16,12 +16,10 @@ def extract_yolo_annotations(ann_filepath):
     yolo_annotations = {}
     for obj in objs:
         obj_info = obj.split()
-        
-        assert len(obj_info) == 6, f"Invalid object info: {obj_info}"
-        assert class_id in consts.KITTI2COCO, f"Unknown class ID: {class_id}"
-
         timeframe_id, _, class_id, img_height, img_width = map(int, obj_info[:5])
 
+        assert len(obj_info) == 6, f"Invalid object info: {obj_info}"
+        assert class_id in consts.KITTI2COCO, f"Unknown class ID: {class_id}"
         if class_id == 10:
             continue
 
@@ -104,8 +102,8 @@ def convert_kitti_to_yolo(kitti_anno_dir, output_dir, training_sequences, valida
 
 
 if __name__ == "__main__":
+    # kitti_dir_input = "/projects/master/c5/KITTI-MOTS-big/instances_txt"
     kitti_dir_input = "/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS/instances_txt"
-    kitti_dir_input = "/projects/master/c5/KITTI-MOTS-big/instances_txt"
     # kitti_dir_output = "/projects/master/c5/test/KITTI_MOTS_YOLO"
 
     training_sequences = [str(sequence).zfill(4) for sequence in list(range(0, 16))]
