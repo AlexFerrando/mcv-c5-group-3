@@ -89,10 +89,10 @@ if __name__ == '__main__':
 
     # Load model
     model, image_processor = load_model()
+    data_loader = VideoDataset(DATASET_PATH)
     
     for video in tqdm(videos, desc="Processing videos", unit="video"):
         
-        data_loader = VideoDataset(DATASET_PATH)
         video_data = data_loader.load_video(video)
         frames = video_data['image']
         
