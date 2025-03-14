@@ -17,11 +17,10 @@ def extract_yolo_annotations(ann_filepath):
     for obj in objs:
         obj_info = obj.split()
         timeframe_id, _, class_id, img_height, img_width = map(int, obj_info[:5])
-
-        assert len(obj_info) == 6, f"Invalid object info: {obj_info}"
-        assert class_id in consts.KITTI2COCO, f"Unknown class ID: {class_id}"
         if class_id == 10:
             continue
+        assert len(obj_info) == 6, f"Invalid object info: {obj_info}"
+        assert class_id in consts.KITTI2COCO, f"Unknown class ID: {class_id}"
 
         rle_str = obj_info[5]
         rle = {
