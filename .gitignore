@@ -4,6 +4,7 @@ huggingface/week1/evaluation_results
 huggingface/week2/Evaluation_off-the-shelf
 jobs_pol/
 *.yaml
+*job_*
 
 
 # Byte-compiled / optimized / DLL files
