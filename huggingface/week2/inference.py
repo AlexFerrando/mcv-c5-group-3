@@ -4,16 +4,14 @@ import torch.nn as nn
 import os
 
 from consts import DetectionResults
-from PIL import Image, ImageDraw
-from transformers import AutoImageProcessor, Mask2FormerModel
-from typing import List, Tuple, Optional, Union, Dict
-from read_data import read_data, load_video
-from consts import inverse_mapping_class_id
-import json
+from PIL import Image
+from transformers import AutoImageProcessor, Mask2FormerModel, Mask2FormerImageProcessor
+from typing import List, Tuple, Union
+from read_data import VideoDataset
 from tqdm import tqdm
 
 
-def load_model(model_name: str = consts.MASK2FORMER, modified: bool = False) -> Tuple[torch.nn.Module, AutoImageProcessor]:
+def load_model(model_name: str = consts.MASK2FORMER) -> Tuple[Mask2FormerModel, Mask2FormerImageProcessor]:
     """
     Load model, processor, and determine device.
     
@@ -32,12 +30,11 @@ def load_model(model_name: str = consts.MASK2FORMER, modified: bool = False) -> 
 
 
 def run_instance_segmentation(
-        model: torch.nn.Module, 
-        image_processor: AutoImageProcessor, 
+        model: Mask2FormerModel, 
+        image_processor: Mask2FormerImageProcessor, 
         images: Union[Image.Image, List[Image.Image]], 
         device: torch.device
     ) -> List[DetectionResults]:
-
     """
     Run object detection inference on one or multiple images.
     
@@ -58,13 +55,9 @@ def run_instance_segmentation(
     inputs = image_processor(images=images, return_tensors="pt")
 
     # Forward pass
+    model.to(device)
     with torch.no_grad():
-        outputs = model(**inputs.to(device))
-
-    # Model predicts class_queries_logits of shape `(batch_size, num_queries)`
-    # and masks_queries_logits of shape `(batch_size, num_queries, height, width)`
-    class_queries_logits = outputs.class_queries_logits
-    masks_queries_logits = outputs.masks_queries_logits
+        outputs = model.forward(**inputs.to(device))
 
     # Crear el tensor de target_sizes
     img_size = torch.tensor([images[0].size[1], images[0].size[0]], dtype=torch.float32)
@@ -78,6 +71,7 @@ def run_instance_segmentation(
     results = pred_instance_map
     # Filter the detection to get only the desired ones: 'car' (id=3 in DeTR) and 'person' (id=1 in DeTR)
     # Post process results to get apropiate format
+    print(results)
             
     return results
 
@@ -85,25 +79,27 @@ def run_instance_segmentation(
 
 if __name__ == '__main__':
 
-    DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
+    # DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
     #DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
+    DATASET_PATH = consts.KITTI_MOTS_PATH_ALEX
 
     # Get video names
-    videos = os.listdir(DATASET_PATH+'/training/image_01')
+    videos = os.listdir(os.path.join(DATASET_PATH, 'training/image_02'))
+    videos = [video for video in videos if not video.startswith('.')]
 
     # Load model
     model, image_processor = load_model()
     
     for video in tqdm(videos, desc="Processing videos", unit="video"):
         
-        if video == '.DS_Store':
-            continue
-        else:
-            dataset = load_video(video)
+        data_loader = VideoDataset(DATASET_PATH)
+        video_data = data_loader.load_video(video)
+        frames = video_data['image']
         
-        frames = dataset['image']
-        
-        predictions = run_instance_segmentation(model, image_processor, frames, device='cpu')
+        batch_size = 4
+        for i in tqdm(range(0, len(frames), batch_size)):
+            batch_frames = frames[i:i + batch_size]
+            predictions = run_instance_segmentation(model, image_processor, batch_frames, device='cuda')
 
     print("Instance segmentation with Mask2Former off-the-shelf finished!")
 

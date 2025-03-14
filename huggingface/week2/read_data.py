@@ -1,218 +1,143 @@
-from collections import defaultdict
 import os
-from typing import List, Dict, Optional
-from datasets import Dataset, DatasetDict, Features, Image as HFImage, Value, Sequence
-from pycocotools.mask import toBbox, decode
 import numpy as np
-from PIL import Image
-import matplotlib.pyplot as plt
+from typing import List, Optional
+from datasets import Dataset, DatasetDict, Features, Image as HFImage, Value, Sequence
+from pycocotools.mask import decode
 
 
-def load_video_frames(folder: str) -> List[str]:
-    """Load sorted image paths from a video sequence folder."""
-    videos = sorted(os.listdir(folder))
-    # Remove the ones starting with .
-    videos = [v for v in videos if not v.startswith('.')]
-    all_frames = []
-    for video in videos:
-        video_path = os.path.join(folder, video)
-        frames = sorted(
-            [os.path.join(video_path, f) for f in os.listdir(video_path) if not f.startswith('.')]
-        )
-        all_frames.extend(frames)
-    return all_frames
+class VideoDataset:
+    """Efficiently loads videos and annotations into Hugging Face's Dataset format."""
 
+    def __init__(self, dataset_path: str):
+        self.dataset_path = dataset_path
 
-def decode_rle_mask(rle_mask: str, img_h: int, img_w: int):
-    """Decode RLE mask into a bounding box (xcenter, ycenter, w, h)."""
-    rle = {'size': [img_h, img_w], 'counts': rle_mask.encode('utf-8')}
-    mask_binary = decode(rle)  # 0s and 1s 
-    mask = np.array(mask_binary, dtype=np.uint8) * 255  # grayscale
+    @staticmethod
+    def decode_rle_mask(rle_mask: str, img_h: int, img_w: int):
+        """Decode RLE mask into a binary mask."""
+        rle = {'size': [img_h, img_w], 'counts': rle_mask.encode('utf-8')}
+        return np.array(decode(rle), dtype=np.uint8)
 
-    # # Después de decodificar la máscara
-    # plt.imshow(mask, cmap="gray")
-    # plt.colorbar()
-    # plt.show()
+    def load_video_annotations(self, video_name: str, target_classes: Optional[List[int]] = None) -> dict:
+        """
+        Load and group annotations for a specific video.
+        
+        Returns a dictionary keyed by image_id, where each value contains:
+        - video: video name
+        - image: path to the image
+        - image_id: unique image id
+        - orig_size: [img_h, img_w]
+        - annotations: {
+                "class_labels": list of class labels,
+                "masks": list of corresponding masks (as nested lists of float32)
+            }
+        """
+        target_classes = target_classes or [1, 2]  # Default to cars & pedestrians
+        annotation_file = os.path.join(self.dataset_path, f'instances_txt/{video_name}.txt')
+        if not os.path.exists(annotation_file):
+            raise FileNotFoundError(f"Annotation file not found: {annotation_file}")
 
-    return mask
-
-
-def load_images_and_annotations_for_video(
-    video_folder: str, 
-    annotation_file: str, 
-    target_classes: Optional[List[int]] = None
-) -> Dict[int, Dict]:
-    """
-    Load annotations and convert them to COCO format, filtering for specific object classes.
-
-    Args:
-        video_folder (str): Path to the folder containing image frames.
-        annotation_file (str): Path to the annotation file.
-        target_classes (List[int], optional): List of class IDs to include (default: [1, 2] for 'car' and 'pedestrian').
-
-    Returns:
-        Dict[int, Dict]: Dictionary in COCO format with filtered annotations.
-    """
-    target_classes = target_classes or [1, 2]  # Default to cars & pedestrians if not provided
-    frames_info = defaultdict(lambda: {
-        "video": "",
-        "image": "",
-        "image_id": 0,
-        "orig_size": [],
-        "area": [],
-        "track_id": [],
-        "class_labels": [],
-        "mask": [],
-        "iscrowd": [],
-    })
-
-    if not os.path.exists(annotation_file):
-        raise FileNotFoundError(f"Annotation file not found: {annotation_file}")
-
-    try:
+        frames_info = {}
         with open(annotation_file, "r") as f:
-            annotations = f.readlines()
-    except Exception as e:
-        raise RuntimeError(f"Error reading annotation file: {e}")
+            for line in f:
+                parts = line.strip().split(" ")
+                if len(parts) < 6:
+                    print(f"Skipping invalid annotation: {line}")
+                    continue
 
-    for line in annotations:
-        parts = line.strip().split(" ")
-        if len(parts) < 6:
-            print(f"Skipping invalid annotation line: {line}")  # Debugging
-            continue
+                try:
+                    image_id, _, category_id, img_h, img_w = map(int, parts[:5])
+                    rle_mask = " ".join(parts[5:])
+                except ValueError:
+                    print(f"Skipping corrupt annotation: {line}")
+                    continue
 
-        try:
-            image_id, track_id, category_id, img_h, img_w = map(int, parts[:5])
-            rle_mask = " ".join(parts[5:])
-        except ValueError:
-            print(f"Skipping corrupt annotation line: {line}")  # Debugging
-            continue
+                if category_id not in target_classes:
+                    continue
 
-        if category_id not in target_classes:
-            continue
+                img_path = os.path.join(self.dataset_path, f'training/image_02/{video_name}/{image_id:06d}.png')
 
-        img_path = os.path.join(video_folder, f"{image_id:06d}.png")
-        mask = decode_rle_mask(rle_mask, img_h, img_w)
+                if image_id not in frames_info:
+                    frames_info[image_id] = {
+                        "video": video_name,
+                        "image": img_path,
+                        "image_id": image_id,
+                        "orig_size": [img_h, img_w],
+                        "annotations": {
+                            "class_labels": [],
+                            "masks": []
+                        }
+                    }
 
-        frame_data = frames_info[image_id]
-        frame_data["video"] = video_folder
-        frame_data["image"] = img_path
-        frame_data["image_id"] = image_id
-        frame_data["orig_size"] = [img_h, img_w]
-        frame_data["track_id"].append(track_id)
-        frame_data["class_labels"].append(category_id)
-        frame_data["mask"].append(mask)
-        frame_data["iscrowd"].append(0)
-        #frame_data["area"].append(area)
+                # Convert the mask to a nested list of float32 values
+                frames_info[image_id]["annotations"]["class_labels"].append(category_id)
+                frames_info[image_id]["annotations"]["masks"].append(rle_mask)
 
-    return dict(frames_info)
+        return frames_info
 
-
-
-
-def load_video(video_name: str):
-    """Load image paths and corresponding annotation masks."""
-
-    DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
-    #DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
-
-    image_folder = DATASET_PATH+f'/training/image_01/{video_name}'
-    annotation_folder = DATASET_PATH+f'/instances_txt/{video_name}.txt'
-
-    if not os.path.exists(image_folder):
-        raise FileNotFoundError(f"Image folder not found: {image_folder}")
-    if not os.path.exists(annotation_folder):
-        raise FileNotFoundError(f"Annotation folder not found: {annotation_folder}")
-
-    dataset = {
-        "video": [], "image": [], "mask": [], "track_id": [], "class_labels": [],
-        "image_id": [], "orig_size": [], "area": [], "iscrowd": []
-    }
-
-
-    frame_to_mask = load_images_and_annotations_for_video(image_folder, annotation_folder)
-
-    for frame_data in frame_to_mask.values():
-        dataset["video"].append(frame_data["video"])
-        dataset["image"].append(frame_data["image"])
-        dataset["mask"].append(frame_data["mask"])
-        dataset["track_id"].append(frame_data["track_id"])
-        dataset["class_labels"].append(frame_data["class_labels"])
-        dataset["image_id"].append(frame_data["image_id"])
-        dataset["orig_size"].append(frame_data["orig_size"])
-        dataset["area"].append(frame_data["area"])
-        dataset["iscrowd"].append(frame_data["iscrowd"])
-
-    video = Dataset.from_dict(dataset, features=get_train_features())
-
-    return video
+    def load_video(self, video_name: str, target_classes: Optional[List[int]] = None) -> Dataset:
+        """
+        Load a specific video's annotations and return a Hugging Face Dataset.
         
+        Each dataset entry will have the structure:
+        {
+            "video": video_name,
+            "image": image_path,
+            "image_id": image_id,
+            "orig_size": [img_h, img_w],
+            "annotations": {
+                "class_labels": [list of class labels],
+                "masks": [list of masks]
+            }
+        }
+        """
+        frames_info = self.load_video_annotations(video_name, target_classes)
+        dataset = {
+            "video": [],
+            "image": [],
+            "image_id": [],
+            "orig_size": [],
+            "annotations": []
+        }
+        for frame in frames_info.values():
+            dataset["video"].append(frame["video"])
+            dataset["image"].append(frame["image"])
+            dataset["image_id"].append(frame["image_id"])
+            dataset["orig_size"].append(frame["orig_size"])
+            dataset["annotations"].append(frame["annotations"])
 
-def load_images_and_annotations(image_folder: str, annotation_folder: str) -> Dict[str, List]:
-    """Load image paths and corresponding annotation masks."""
+        return Dataset.from_dict(dataset, features=self.get_features())
 
-    if not os.path.exists(image_folder):
-        raise FileNotFoundError(f"Image folder not found: {image_folder}")
-    if not os.path.exists(annotation_folder):
-        raise FileNotFoundError(f"Annotation folder not found: {annotation_folder}")
+    def load_data(self) -> Dataset:
+        """Load all training videos into a single Dataset."""
+        image_folder = os.path.join(self.dataset_path, 'training/image_02')
+        dataset = {"video": [], "image": [], "image_id": [], "class_labels": [], "mask": [], "orig_size": []}
 
-    dataset = {
-        "video": [], "image": [], "boxes": [], "track_id": [], "class_labels": [],
-        "image_id": [], "orig_size": [], "area": [],
-    }
+        for video_name in sorted(os.listdir(image_folder)):
+            if video_name.startswith('.'):
+                continue
 
-    for seq in sorted(os.listdir(image_folder)):
-        if seq.startswith('.'):
-            continue
-        
-        seq_img_folder = os.path.join(image_folder, seq)
-        seq_anno_file = os.path.join(annotation_folder, f"{seq}.txt")
+            try:
+                video_data = self.load_video(video_name)
 
-        if not os.path.exists(seq_anno_file):
-            print(f"Warning: Annotation file missing for sequence {seq}. Skipping...")
-            continue
+                # Extend lists instead of appending individual dicts
+                for key in dataset:
+                    dataset[key].extend(video_data[key])
 
-        frame_to_mask = load_images_and_annotations_for_video(seq_img_folder, seq_anno_file)
+            except FileNotFoundError:
+                print(f"Warning: Missing annotations for {video_name}, skipping...")
 
-        for frame_data in frame_to_mask.values():
-            dataset["video"].append(frame_data["video"])
-            dataset["image"].append(frame_data["image"])
-            dataset["boxes"].append(frame_data["boxes"])
-            dataset["track_id"].append(frame_data["track_id"])
-            dataset["class_labels"].append(frame_data["class_labels"])
-            dataset["image_id"].append(frame_data["image_id"])
-            dataset["orig_size"].append(frame_data["orig_size"])
-            dataset["area"].append(frame_data["area"])
+        return Dataset.from_dict(dataset, features=self.get_train_features())
 
-    return dataset
-
-
-def read_test_data(data_path: str) -> Dataset:
-    image_folder = os.path.join(data_path, 'testing/image_02')
-    images = load_video_frames(image_folder)
-    return Dataset.from_dict({'image': images}, features=Features({'image': HFImage()}))
-
-def read_train_data(data_path: str) -> Dataset:
-    image_folder = os.path.join(data_path, 'training/image_02')
-    annotation_folder = os.path.join(data_path, 'instances_txt')
-    data = load_images_and_annotations(image_folder, annotation_folder)
-    return Dataset.from_dict(data, features=get_train_features())
-
-def get_train_features() -> Features:
-    """Define dataset features for Hugging Face `Dataset`."""
-    return Features({
-        "video": Value("string"),
-        "image": HFImage(),  # Image path, automatically converted to PIL
-        "image_id": Value("int32"),
-        "track_id": Sequence(Value("int32")),
-        "class_labels": Sequence(Value("int32")),
-        "mask": Sequence(Sequence(Value("float32"))),  # List of bounding boxes
-        "orig_size": Sequence(Value("int32")),  # Alternative: Array(2, "int32")
-        "area": Sequence(Value("float32")),  # Consistency with bbox
-    })
-
-def read_data(data_path: str) -> DatasetDict:
-    return DatasetDict({
-        'train': read_train_data(data_path),
-        'test': read_test_data(data_path)
-    })
+    @staticmethod
+    def get_features() -> Features:
+        """Define dataset features for Hugging Face `Dataset` with nested annotations."""
+        return Features({
+            "video": Value("string"),
+            "image": HFImage(),
+            "image_id": Value("int32"),
+            "orig_size": Sequence(Value("int32")),
+            "annotations": Features({
+                "class_labels": Sequence(Value("int32")),
+                "masks": Sequence(Value("string"))
+            })
+        })
