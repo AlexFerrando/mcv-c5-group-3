@@ -29,13 +29,10 @@ def load_model(model_name: str = consts.MASK2FORMER) -> Tuple[Mask2FormerForUniv
     Returns:
         Tuple containing model, image processor, and device
     """
-    device = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
-
     image_processor = AutoImageProcessor.from_pretrained(model_name)
     model = Mask2FormerForUniversalSegmentation.from_pretrained(model_name)
-    model.to(device)
     
-    return model, image_processor, device
+    return model, image_processor
 
 
 def keep_only_interesting_classes(predictions: List[Dict]) -> List[Dict]:

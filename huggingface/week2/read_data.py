@@ -110,7 +110,7 @@ class VideoDataset:
     def load_data(self) -> Dataset:
         """Load all training videos into a single Dataset."""
         image_folder = os.path.join(self.dataset_path, 'training/image_02')
-        dataset = {"video": [], "image": [], "image_id": [], "class_labels": [], "mask": [], "orig_size": []}
+        dataset = {"video": [], "image": [], "image_id": [], "orig_size": [], "annotations": []}
 
         for video_name in sorted(os.listdir(image_folder)):
             if video_name.startswith('.'):
@@ -126,7 +126,7 @@ class VideoDataset:
             except FileNotFoundError:
                 print(f"Warning: Missing annotations for {video_name}, skipping...")
 
-        return Dataset.from_dict(dataset, features=self.get_train_features())
+        return Dataset.from_dict(dataset, features=self.get_features())
 
     @staticmethod
     def get_features() -> Features:
@@ -140,4 +140,27 @@ class VideoDataset:
                 "class_labels": Sequence(Value("int32")),
                 "masks": Sequence(Value("string"))
             })
+        })
+
+    @staticmethod
+    def split_data(data: Dataset) -> DatasetDict:
+        """Split the dataset into training, validation, and test sets. by video."""
+        video_names = data.unique("video")
+        video_names.sort()
+        video_count = len(video_names)
+        train_count = int(0.7 * video_count)
+        val_count = int(0.15 * video_count)
+
+        train_videos = video_names[:train_count]
+        val_videos = video_names[train_count:train_count + val_count]
+        test_videos = video_names[train_count + val_count:]
+
+        train_data = data.filter(lambda x: x["video"] in train_videos)
+        val_data = data.filter(lambda x: x["video"] in val_videos)
+        test_data = data.filter(lambda x: x["video"] in test_videos)
+
+        return DatasetDict({
+            "train": train_data,
+            "validation": val_data,
+            "test": test_data
         })
