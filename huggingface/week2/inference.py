@@ -29,10 +29,12 @@ def load_model(model_name: str = consts.MASK2FORMER) -> Tuple[Mask2FormerForUniv
     Returns:
         Tuple containing model, image processor, and device
     """
+    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+
     image_processor = AutoImageProcessor.from_pretrained(model_name)
-    model = Mask2FormerForUniversalSegmentation.from_pretrained(model_name)
+    model = Mask2FormerForUniversalSegmentation.from_pretrained(model_name).to(device)
     
-    return model, image_processor
+    return model, image_processor, device
 
 
 def keep_only_interesting_classes(predictions: List[Dict]) -> List[Dict]:
@@ -57,7 +59,37 @@ def keep_only_interesting_classes(predictions: List[Dict]) -> List[Dict]:
         prediction['segmentation'] = np.where(np.isin(prediction['segmentation'], interesting_indices), prediction['segmentation'], -1)
 
     return predictions
+
     
+def filter_predictions_by_mask(predictions):
+    """
+    Filtra las predicciones para incluir solo objetos que tienen representación
+    en el mapa de segmentación.
+    """
+    filtered_results = []
+    
+    for pred in predictions:
+        # Obtener IDs presentes en la máscara de segmentación
+        valid_ids = set(np.unique(pred['segmentation']).tolist())
+        
+        # Eliminar -1 que representa el fondo
+        if -1 in valid_ids:
+            valid_ids.remove(-1)
+
+        
+        # Filtrar segments_info
+        filtered_segments = [info for info in pred['segments_info'] 
+                             if info['id'] in valid_ids]
+        
+        # Crear predicción filtrada
+        filtered_pred = {
+            'segmentation': pred['segmentation'],
+            'segments_info': filtered_segments
+        }
+        
+        filtered_results.append(filtered_pred)
+    
+    return filtered_results
 
 
 def run_instance_segmentation(
@@ -96,13 +128,18 @@ def run_instance_segmentation(
     # Perform post-processing to get instance segmentation map
     predictions = image_processor.post_process_instance_segmentation(
         outputs, 
-        target_sizes=[tuple(size.tolist()) for size in target_sizes]  # Ensure it's a tuple of ints
+        target_sizes=[tuple(size.tolist()) for size in target_sizes],
+        mask_threshold=0.3  # Ensure it's a tuple of ints
     )
 
     # Filter the predictions so we only have class 'car' and 'person'
-    filtered_predictions = keep_only_interesting_classes(predictions)
+    filtered_predictions_byCLASS = keep_only_interesting_classes(predictions)
+    
+    # There are some detected objects that don't appear in the mask. Filter them out.
+    filtered_predictions_byMASK = filter_predictions_by_mask(filtered_predictions_byCLASS)
 
-    return filtered_predictions
+    return filtered_predictions_byMASK
+
 
 def save_predictions(predictions, video_name: str, output_dir: str, batch_start_idx: int=0):
     """
@@ -269,9 +306,9 @@ if __name__ == '__main__':
             batch_frames = frames[i:i + batch_size]
             predictions = run_instance_segmentation(model, image_processor, batch_frames, device=device)
 
-            output_dir = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/huggingface/week2/Evaluation_off-the-shelf/predictions'
-            save_predictions(predictions, video, output_dir=output_dir, batch_start_idx=i)
-            batch_number += 1
+            # output_dir = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/huggingface/week2/Evaluation_off-the-shelf/predictions'
+            # save_predictions(predictions, video, output_dir=output_dir, batch_start_idx=i)
+            # batch_number += 1
             
             # Visualize predictions
             for j, frame in enumerate(batch_frames):
