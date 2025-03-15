@@ -47,13 +47,18 @@ KIITI_TO_COCO_IDS = {
 }
 
 LABEL2ID = {
-    'car': 1,
-    'person': 2
+    'pedestrian': 0,
+    'car': 1
 }
 
 ID2LABEL = {
-    1: 'car',
-    2: 'person'
+    0: 'pedestrian',
+    1: 'car'
+}
+
+KIITI_TO_COCO_IDS = {
+    1: 1, # 'car'
+    2: 0, # 'pedestrian'
 }
 
 @dataclass
