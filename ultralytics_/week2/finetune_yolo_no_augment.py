@@ -24,21 +24,21 @@ if __name__ == "__main__":
         
         epochs=30,
         optimizer="auto",
-        freeze=23,
+        freeze=None,
         
         lr0=0.01,
         warmup_epochs=3,
         mask_ratio=4,
         batch=0.4,
         
-        hsv_h=0.015,
-        hsv_s=0.7,
-        hsv_v=0.4,
-        translate=0.1,
-        scale=0.5,
-        fliplr=0.5,
+        hsv_h=0.00,
+        hsv_s=0.0,
+        hsv_v=0.0,
+        translate=0.0,
+        scale=0.0,
+        fliplr=0.0,
         mosaic=1.0,
-        erasing=0.4,
+        erasing=0.0,
         crop_fraction=1.0,
         # auto_augment='autoaugment'
         
@@ -48,5 +48,5 @@ if __name__ == "__main__":
         plots=False,
         device='cuda',
         project=args.output_path,
-        name=f"default_yolo_segment_auto_freeze23",
+        name=f"default_yolo_segment_auto",
     )
