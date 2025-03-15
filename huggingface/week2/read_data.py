@@ -144,23 +144,19 @@ class VideoDataset:
 
     @staticmethod
     def split_data(data: Dataset) -> DatasetDict:
-        """Split the dataset into training, validation, and test sets. by video."""
+        """Split the dataset into training and test sets (80%, 20%)."""
         video_names = data.unique("video")
         video_names.sort()
         video_count = len(video_names)
-        train_count = int(0.7 * video_count)
-        val_count = int(0.15 * video_count)
+        train_count = int(0.8 * video_count)
 
         train_videos = video_names[:train_count]
-        val_videos = video_names[train_count:train_count + val_count]
-        test_videos = video_names[train_count + val_count:]
+        test_videos = video_names[train_count:]
 
         train_data = data.filter(lambda x: x["video"] in train_videos)
-        val_data = data.filter(lambda x: x["video"] in val_videos)
         test_data = data.filter(lambda x: x["video"] in test_videos)
 
         return DatasetDict({
             "train": train_data,
-            "validation": val_data,
             "test": test_data
         })

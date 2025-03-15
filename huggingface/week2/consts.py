@@ -46,6 +46,16 @@ KIITI_TO_COCO_IDS = {
     2: 1, # 'pedestrian'
 }
 
+LABEL2ID = {
+    'car': 1,
+    'person': 2
+}
+
+ID2LABEL = {
+    1: 'car',
+    2: 'person'
+}
+
 @dataclass
 class DetectionResults:
     scores: Tensor
