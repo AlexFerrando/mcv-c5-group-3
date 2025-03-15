@@ -1,20 +1,21 @@
 import consts
 
-from finetuning_utils import transform, collate_fn
+import albumentations as A
+from finetuning_utils import augment_and_transform_batch, collate_fn
 from inference import load_model
 from transformers import TrainingArguments, Trainer
 from read_data import VideoDataset
 from functools import partial
 
-DATA_PATH = consts.KITTI_MOTS_PATH_ALEX
+DATA_PATH = consts.KITTI_MOTS_PATH
 
 # Define training arguments
 training_args = TrainingArguments(
     output_dir="./outputs/alex/mask2former_finetuned",
     num_train_epochs=75,
     fp16=False,
-    per_device_train_batch_size=1, 
-    per_device_eval_batch_size=1, 
+    per_device_train_batch_size=8, 
+    per_device_eval_batch_size=8, 
     dataloader_num_workers=4,
     learning_rate=5e-5,
     lr_scheduler_type="cosine",
@@ -43,16 +44,33 @@ if __name__ == '__main__':
 
     model, image_processor = load_model()
 
-    train_transform = partial(transform, image_processor=image_processor)
+    train_augment_and_transform = A.Compose(
+        [
+            A.HorizontalFlip(p=0.5),
+            A.RandomBrightnessContrast(p=0.5),
+            A.HueSaturationValue(p=0.1),
+        ],
+    )
+    validation_transform = A.Compose(
+        [A.NoOp()],
+    )
 
-    train_data = data_dict["train"].with_transform(train_transform)
-    test_data = data_dict["test"].with_transform(train_transform)
+    # Make transform functions for batch and apply for dataset splits
+    train_transform_batch = partial(
+        augment_and_transform_batch, transform=train_augment_and_transform, image_processor=image_processor
+    )
+    validation_transform_batch = partial(
+        augment_and_transform_batch, transform=validation_transform, image_processor=image_processor
+    )
+
+    train_data = data_dict["train"].with_transform(train_transform_batch)
+    val_data = data_dict["train"].with_transform(validation_transform_batch)
 
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=train_data,
-        eval_dataset=test_data,
+        eval_dataset=val_data,
         processing_class=image_processor,
         data_collator=collate_fn,
     )

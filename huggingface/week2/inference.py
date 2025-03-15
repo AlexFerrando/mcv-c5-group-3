@@ -29,12 +29,10 @@ def load_model(model_name: str = consts.MASK2FORMER) -> Tuple[Mask2FormerForUniv
     Returns:
         Tuple containing model, image processor, and device
     """
-    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
-
     image_processor = AutoImageProcessor.from_pretrained(model_name)
-    model = Mask2FormerForUniversalSegmentation.from_pretrained(model_name).to(device)
+    model = Mask2FormerForUniversalSegmentation.from_pretrained(model_name)
     
-    return model, image_processor, device
+    return model, image_processor
 
 
 def keep_only_interesting_classes(predictions: List[Dict]) -> List[Dict]:
@@ -314,7 +312,9 @@ if __name__ == '__main__':
     videos = [video for video in videos if not video.startswith('.')]
 
     # Load model
-    model, image_processor, device = load_model()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model, image_processor = load_model()
+    model.to(device)
     data_loader = VideoDataset(DATASET_PATH)
 
     for video in tqdm(videos, desc="Processing videos", unit="video"):
