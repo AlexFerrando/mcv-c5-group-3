@@ -156,7 +156,7 @@ def coco_reformat(predictions_list):
     coco_results = []
     
     # Procesar cada frame
-    for frame_idx, frame_pred in enumerate(predictions_list):
+    for frame_idx, frame_pred in enumerate(predictions_list, 1):  # Empezando desde 1 como en la segunda función
         # Obtener mapa de segmentación y segments_info
         segmentation_map = frame_pred['segmentation']
         segments_info = frame_pred['segments_info']
@@ -199,10 +199,10 @@ def coco_reformat(predictions_list):
             # Crear entrada en formato COCO
             coco_result = {
                 'image_id': int(frame_idx),
-                'category_id': int(category_id),
-                'segmentation': rle,
-                'score': float(score),
-                'bbox': bbox
+                'category_id': consts.inverse_mapping_class_id('coco', int(category_id)),
+                'segmentation': rle,  # Incluimos el RLE para evaluación de máscaras
+                'bbox': bbox,
+                'score': float(score)
             }
             
             coco_results.append(coco_result)
@@ -221,17 +221,14 @@ def save_predictions(coco_results, video_name, output_dir="predictions"):
     
     Returns:
         str: Ruta del archivo guardado
-    """
-    import os
-    import json
-    
+    """    
     os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(output_dir, f"preds_coco_{video_name}.json")
     
     # Guardar resultados en JSON
     with open(output_file, 'w') as f:
-        json.dump(coco_results, f)
-    
+        json.dump(coco_results, f, indent=4)
+
     print(f"Guardadas {len(coco_results)} predicciones para el vídeo {video_name} en {output_file}")
     
     return output_file
