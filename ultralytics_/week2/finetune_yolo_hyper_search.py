@@ -67,9 +67,9 @@ if __name__ == "__main__":
     
     # Define the sweep configuration as a Python dictionary
     sweep_config = {
-        "method": "bayes",  # or "random", "grid", etc.
+        "method": "random",  # or "random", "grid", etc.
         "metric": {
-            "name": "fitness",  # Adjust the metric name to the one logged by your training
+            "name": "metrics/mAP50(B)",
             "goal": "maximize"
         },
         "parameters": {
