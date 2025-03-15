@@ -17,7 +17,7 @@ if __name__ == "__main__":
     wandb.login(key = "8410a2da3f323633210ca8d25ce6862368d9f489")
     model = YOLO(args.model_path)
     config_dataset_path = os.path.join(consts.PATH_KITTI_MOTS_YOLO_SEGMENTATION, "kitti_mots_config.yaml")
-    add_wandb_callback(model, enable_model_checkpointing = False, enable_train_validation_logging=True)
+    add_wandb_callback(model, enable_model_checkpointing = False, enable_train_validation_logging=False)
     model.train(
         data=config_dataset_path,
         classes=consts.YOLO_CLASSES,
@@ -26,10 +26,10 @@ if __name__ == "__main__":
         optimizer="AdamW",
         freeze=None,
         
-        lr0=0.001,
-        warmup_epochs=3,
+        lr0=0.0005,
+        warmup_epochs=6,
         mask_ratio=4,
-        batch=4,
+        batch=0.7,
         
         hsv_h=0.015,
         hsv_s=0.7,
@@ -48,5 +48,5 @@ if __name__ == "__main__":
         plots=False,
         device='cuda',
         project=args.output_path,
-        name=f"default_yolo_segment_adamw_0.001lr0",
+        name=f"default_yolo_segment_adamw_0.0005lr0",
     )
