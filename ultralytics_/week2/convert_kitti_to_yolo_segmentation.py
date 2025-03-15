@@ -62,15 +62,6 @@ def convert_kitti_to_yolo(kitti_anno_dir, output_dir, training_sequences, valida
         os.makedirs(output_dir_labels, exist_ok=True)
         os.makedirs(output_dir_images, exist_ok=True)
 
-        # output_dir = os.path.join(output_dir, folder_name)
-        # Remove the output directory if it already exists for a fresh start
-
-        # os.makedirs(output_dir, exist_ok=True)
-        # output_dir_images = os.path.join(output_dir, "images")
-        # os.makedirs(output_dir_images, exist_ok=True)
-        # output_dir_labels = os.path.join(output_dir, "labels")
-        # os.makedirs(output_dir_labels, exist_ok=True)
-        
         for ann_filename in sorted(os.listdir(kitti_anno_dir)):
             if ann_filename.replace('.txt', '') not in sequence_ids:
                 continue
@@ -107,7 +98,7 @@ def convert_kitti_to_yolo(kitti_anno_dir, output_dir, training_sequences, valida
 
     # Call the function for training and validation sequences
     process_kitti_annotations(kitti_anno_dir, output_dir, training_sequences, copy_images, "training")
-    # process_kitti_annotations(kitti_anno_dir, output_dir, validation_sequences, copy_images, "validation")
+    process_kitti_annotations(kitti_anno_dir, output_dir, validation_sequences, copy_images, "validation")
     process_kitti_annotations(kitti_anno_dir, output_dir, validation_sequences, copy_images, "test")
 
 
