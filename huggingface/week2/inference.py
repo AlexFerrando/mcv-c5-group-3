@@ -311,8 +311,8 @@ def visualize_prediction(
 
 if __name__ == '__main__':
 
-    DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
-    #DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
+    #DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
+    DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
     #DATASET_PATH = consts.KITTI_MOTS_PATH_ALEX
 
     # Get video names
@@ -338,13 +338,14 @@ if __name__ == '__main__':
             predictions_batch = run_instance_segmentation(model, image_processor, batch_frames, device=device)
             predictions_video.extend(predictions_batch)
             
-            # Visualize predictions
-            for j, frame in enumerate(batch_frames):
-                visualize_prediction(frame, predictions_batch[j], file_name=f"{video}_{i+j}.png")
+            # # Visualize predictions
+            # for j, frame in enumerate(batch_frames):
+            #     visualize_prediction(frame, predictions_batch[j], file_name=f"{video}_{i+j}.png")
         
         # After the hole video is processed, save the predictions in COCO format into a JSON file
         predictions_coco = coco_reformat(predictions_video)
-        output_dir = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/huggingface/week2/Evaluation_off-the-shelf/predictions'
+        #output_dir = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/huggingface/week2/Evaluation_off-the-shelf/predictions'
+        output_dir = '/ghome/c5mcv03/mcv-c5-group-3/huggingface/week2/preds_off-the-shelf'
         save_predictions(predictions_coco, video, output_dir=output_dir)
 
     print("Instance segmentation with Mask2Former off-the-shelf finished!")
