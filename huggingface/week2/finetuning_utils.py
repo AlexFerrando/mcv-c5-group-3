@@ -249,7 +249,7 @@ class Evaluator:
         print(metrics)
         wandb.log(metrics)
 
-        # Reset metric for next evaluation
+        # Reset metric for next evaluation.
         self.reset_metric()
 
         return metrics
