@@ -23,10 +23,10 @@ if __name__ == "__main__":
         classes=consts.YOLO_CLASSES,
         
         epochs=30,
-        optimizer="auto",
+        optimizer="AdamW",
         freeze=None,
         
-        lr0=0.01,
+        lr0=0.001,
         warmup_epochs=3,
         mask_ratio=4,
         batch=0.4,

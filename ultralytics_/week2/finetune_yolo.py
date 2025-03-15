@@ -23,13 +23,13 @@ if __name__ == "__main__":
         classes=consts.YOLO_CLASSES,
         
         epochs=30,
-        optimizer="auto",
-        freeze=23,
+        optimizer="AdamW",
+        freeze=None,
         
-        lr0=0.01,
+        lr0=0.001,
         warmup_epochs=3,
         mask_ratio=4,
-        batch=0.4,
+        batch=4,
         
         hsv_h=0.015,
         hsv_s=0.7,
@@ -48,5 +48,5 @@ if __name__ == "__main__":
         plots=False,
         device='cuda',
         project=args.output_path,
-        name=f"default_yolo_segment_auto_freeze23",
+        name=f"default_yolo_segment_adamw_0.001lr0",
     )
