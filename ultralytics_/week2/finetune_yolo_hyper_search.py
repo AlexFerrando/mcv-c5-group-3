@@ -12,7 +12,7 @@ def training_func():
 
     # Use sweep-provided parameters with fallback defaults
     model_path = config.get("model_path", "yolo11n-seg.pt")
-    output_path = config.get("output_path", "ultralytics_/segmentation")
+    output_path = config.get("output_path", "ultralytics_segmentation")
     
     # Initialize YOLO model
     model = YOLO(model_path)
@@ -27,7 +27,7 @@ def training_func():
          "device": "cuda",
          "project": output_path,
          "classes": consts.YOLO_CLASSES,
-         "optimizer": {"value": "AdamW"}
+         "optimizer": "AdamW"
          # Repeated keys removed; adjust as necessary.
     }
     
@@ -51,14 +51,14 @@ def training_func():
     # add_wandb_callback(model, enable_model_checkpointing=False, enable_train_validation_logging=True)
     
     # Train the model using the dataset config and the combined parameters
-    model.train(data=config_dataset_path, epochs=20, patience=5, batch=16, imgsz=1024, **train_args, **sweep_params)
+    model.train(data=config_dataset_path, epochs=20, patience=5, batch=16, **train_args, **sweep_params)
     wandb.finish()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train YOLO model with wandb sweep")
     parser.add_argument("--model_path", type=str, default="yolo11n-seg.pt",
                         help="Path to the YOLO model")
-    parser.add_argument("--output_path", type=str, default="ultralytics_/segmentation",
+    parser.add_argument("--output_path", type=str, default="ultralytics_segmentation",
                         help="Path to save the results")
     args = parser.parse_args()
 
@@ -97,4 +97,4 @@ if __name__ == "__main__":
     print("Sweep ID:", sweep_id)
 
     # Launch the sweep agent that will call the training function for each set of hyperparameters
-    wandb.agent(sweep_id, function=training_func)
+    wandb.agent(sweep_id, function=training_func, count=6)
