@@ -7,22 +7,13 @@ import wandb
 import consts
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Evaluate YOLO model")
-    parser.add_argument("--model_path", type=str, help="Path to the YOLO model")
-    parser.add_argument("--output_path", type=str, help="Path to save the results", default="/ghome/c5mcv03/mcv-c5-group-3/outputs/pol/job_outputs")
-    parser.add_argument("--split_val", type=bool, help="Evaluate the validation set", default=True)
-    parser.add_argument("--val_name", type=str, help="Name for the validation results", default="off-the-shelf evaluation")
-    args = parser.parse_args()
-
-    wandb.login(key = "8410a2da3f323633210ca8d25ce6862368d9f489")
-    model = YOLO(args.model_path)
+def validate_model(model, output_path, split_val=True, val_name="off-the-shelf evaluation"):
     results = model.val(data=os.path.join(consts.PATH_KITTI_MOTS_YOLO_SEGMENTATION, "kitti_mots_config.yaml"),
-                        classes=consts.YOLO_CLASSES, cache=False, project=args.output_path,
-                        split="val" if args.split_val else "train",
-                        name=args.val_name)
+                        classes=consts.YOLO_CLASSES, cache=False, project=output_path,
+                        split="val" if split_val else "train",
+                        name=val_name)
 
-    metrics_file = os.path.join(args.output_path, f"{args.val_name}_evaluation_metrics.txt")
+    metrics_file = os.path.join(output_path, f"{val_name}_evaluation_metrics.txt")
     with open(metrics_file, "w") as f:
         f.write(f"mAP50-95: {results.seg.map}\n")
         f.write(f"mAP50: {results.seg.map50}\n")
@@ -49,5 +40,17 @@ if __name__ == "__main__":
         f.write(f"Mean recall: {results.seg.mr}\n")
         f.write(f"Precision: {results.seg.p}\n")
         f.write(f"Recall: {results.seg.r}\n")
-
     print(f"Metrics saved to {metrics_file}")
+    
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Evaluate YOLO model")
+    parser.add_argument("--model_path", type=str, help="Path to the YOLO model")
+    parser.add_argument("--output_path", type=str, help="Path to save the results", default="/ghome/c5mcv03/mcv-c5-group-3/outputs/pol/job_outputs")
+    parser.add_argument("--split_val", type=bool, help="Evaluate the validation set", default=True)
+    parser.add_argument("--val_name", type=str, help="Name for the validation results", default="off-the-shelf evaluation")
+    args = parser.parse_args()
+
+    wandb.login(key = "8410a2da3f323633210ca8d25ce6862368d9f489")
+    model = YOLO(args.model_path)
+    validate_model(model, args.output_path, args.split_val, args.val_name)
