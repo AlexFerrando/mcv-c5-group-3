@@ -29,7 +29,10 @@ def load_model(model_name: str = consts.MASK2FORMER) -> Tuple[Mask2FormerForUniv
     Returns:
         Tuple containing model, image processor, and device
     """
-    image_processor = AutoImageProcessor.from_pretrained(model_name)
+    image_processor = Mask2FormerImageProcessor.from_pretrained(
+        model_name,
+        # size = {"width": 480, "height": 480}, # se puede cambiar a otro tamaño
+    )
     model = Mask2FormerForUniversalSegmentation.from_pretrained(model_name)
     
     return model, image_processor

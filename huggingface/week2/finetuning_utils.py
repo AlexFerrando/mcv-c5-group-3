@@ -89,9 +89,11 @@ def augment_and_transform_batch(
     return batch
 
 
-def collate_fn(features: List[BatchFeature]) -> BatchFeature:
-    """Collate a list of features into a single batch feature."""
-    data = {}
-    for key in features[0]:
-        data[key] = torch.stack([feature[key] for feature in features])
-    return data
+def collate_fn(examples: BatchFeature) -> Dict[str, torch.Tensor]:
+    batch = {}
+    batch["pixel_values"] = torch.stack([example["pixel_values"] for example in examples])
+    batch["class_labels"] = [example["class_labels"] for example in examples]
+    batch["mask_labels"] = [example["mask_labels"] for example in examples]
+    if "pixel_mask" in examples[0]:
+        batch["pixel_mask"] = torch.stack([example["pixel_mask"] for example in examples])
+    return batch
