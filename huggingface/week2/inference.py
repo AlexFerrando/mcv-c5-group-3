@@ -19,7 +19,7 @@ from pycocotools import mask as mask_util
 
 CONFIG = Mask2FormerConfig.from_pretrained(consts.MASK2FORMER)
 
-def load_model(model_name: str = consts.MASK2FORMER) -> Tuple[Mask2FormerForUniversalSegmentation, Mask2FormerImageProcessor]:
+def load_model(model_name: str = consts.MASK2FORMER, modified: bool = False) -> Tuple[Mask2FormerForUniversalSegmentation, Mask2FormerImageProcessor]:
     """
     Load model, processor, and determine device.
     
@@ -33,7 +33,15 @@ def load_model(model_name: str = consts.MASK2FORMER) -> Tuple[Mask2FormerForUniv
         model_name,
         # size = {"width": 480, "height": 480}, # se puede cambiar a otro tamaño
     )
-    model = Mask2FormerForUniversalSegmentation.from_pretrained(model_name)
+    if modified:
+        model = Mask2FormerForUniversalSegmentation.from_pretrained(
+            model_name,
+            label2id=consts.LABEL2ID,
+            id2label=consts.ID2LABEL,
+            ignore_mismatched_sizes=True
+        )
+    else:
+        model = Mask2FormerForUniversalSegmentation.from_pretrained(model_name)
     
     return model, image_processor
 
