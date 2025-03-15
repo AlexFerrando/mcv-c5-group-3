@@ -56,7 +56,7 @@ ID2LABEL = {
     1: 'car'
 }
 
-KIITI_TO_COCO_IDS = {
+KIITI_TO_MODEL_IDS = {
     1: 1, # 'car'
     2: 0, # 'pedestrian'
 }
