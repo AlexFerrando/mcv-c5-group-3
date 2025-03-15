@@ -26,10 +26,10 @@ def inverse_mapping_class_id(dataset: str=None, class_id: int=None):
     """
     
     if dataset == 'coco':
-        if class_id == 2:  # 'car'
+        if class_id == 3:  # 'car'
             return 1
         
-        elif class_id == 0: # 'person'
+        elif class_id == 1: # 'person'
             return 2
     
     elif dataset == 'kitti':
@@ -47,13 +47,13 @@ KIITI_TO_COCO_IDS = {
 }
 
 LABEL2ID = {
-    'car': 1,
-    'person': 2
+    'car': 0,
+    'person': 1
 }
 
 ID2LABEL = {
-    1: 'car',
-    2: 'person'
+    0: 'car',
+    1: 'person'
 }
 
 @dataclass
