@@ -26,10 +26,10 @@ if __name__ == "__main__":
         optimizer="AdamW",
         freeze=None,
         
-        lr0=0.001,
-        warmup_epochs=3,
+        lr0=0.0005,
+        warmup_epochs=6,
         mask_ratio=4,
-        batch=4,
+        batch=0.7,
         
         hsv_h=0.015,
         hsv_s=0.7,
@@ -48,5 +48,5 @@ if __name__ == "__main__":
         plots=False,
         device='cuda',
         project=args.output_path,
-        name=f"default_yolo_segment_adamw_0.001lr0",
+        name=f"default_yolo_segment_adamw_0.0005lr0",
     )
