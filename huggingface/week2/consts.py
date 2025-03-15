@@ -47,8 +47,8 @@ KIITI_TO_COCO_IDS = {
 }
 
 LABEL2ID = {
-    'pedestrian': 0,
-    'car': 1
+    'car': 1,
+    'person': 2
 }
 
 ID2LABEL = {

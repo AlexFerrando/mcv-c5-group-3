@@ -165,7 +165,7 @@ def coco_reformat(predictions_list):
     coco_results = []
     
     # Procesar cada frame
-    for frame_idx, frame_pred in enumerate(predictions_list):
+    for frame_idx, frame_pred in enumerate(predictions_list, 1):  # Empezando desde 1 como en la segunda función
         # Obtener mapa de segmentación y segments_info
         segmentation_map = frame_pred['segmentation']
         segments_info = frame_pred['segments_info']
@@ -208,10 +208,10 @@ def coco_reformat(predictions_list):
             # Crear entrada en formato COCO
             coco_result = {
                 'image_id': int(frame_idx),
-                'category_id': int(category_id),
-                'segmentation': rle,
-                'score': float(score),
-                'bbox': bbox
+                'category_id': consts.inverse_mapping_class_id('coco', int(category_id)),
+                'segmentation': rle,  # Incluimos el RLE para evaluación de máscaras
+                'bbox': bbox,
+                'score': float(score)
             }
             
             coco_results.append(coco_result)
@@ -230,17 +230,14 @@ def save_predictions(coco_results, video_name, output_dir="predictions"):
     
     Returns:
         str: Ruta del archivo guardado
-    """
-    import os
-    import json
-    
+    """    
     os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(output_dir, f"preds_coco_{video_name}.json")
     
     # Guardar resultados en JSON
     with open(output_file, 'w') as f:
-        json.dump(coco_results, f)
-    
+        json.dump(coco_results, f, indent=4)
+
     print(f"Guardadas {len(coco_results)} predicciones para el vídeo {video_name} en {output_file}")
     
     return output_file
@@ -314,8 +311,8 @@ def visualize_prediction(
 
 if __name__ == '__main__':
 
-    DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
-    #DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
+    #DATASET_PATH = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/KITTI_MOTS'
+    DATASET_PATH = '/ghome/c5mcv03/mcv/datasets/C5/KITTI-MOTS'
     #DATASET_PATH = consts.KITTI_MOTS_PATH_ALEX
 
     # Get video names
@@ -341,13 +338,14 @@ if __name__ == '__main__':
             predictions_batch = run_instance_segmentation(model, image_processor, batch_frames, device=device)
             predictions_video.extend(predictions_batch)
             
-            # Visualize predictions
-            for j, frame in enumerate(batch_frames):
-                visualize_prediction(frame, predictions_batch[j], file_name=f"{video}_{i+j}.png")
+            # # Visualize predictions
+            # for j, frame in enumerate(batch_frames):
+            #     visualize_prediction(frame, predictions_batch[j], file_name=f"{video}_{i+j}.png")
         
         # After the hole video is processed, save the predictions in COCO format into a JSON file
         predictions_coco = coco_reformat(predictions_video)
-        output_dir = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/huggingface/week2/Evaluation_off-the-shelf/predictions'
+        #output_dir = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Recognition/mcv-c5-group-3/huggingface/week2/Evaluation_off-the-shelf/predictions'
+        output_dir = '/ghome/c5mcv03/mcv-c5-group-3/huggingface/week2/preds_off-the-shelf'
         save_predictions(predictions_coco, video, output_dir=output_dir)
 
     print("Instance segmentation with Mask2Former off-the-shelf finished!")

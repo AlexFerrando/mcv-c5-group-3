@@ -3,6 +3,7 @@ BASE_PATH_OUTPUT_LOCAL = "/projects/master/c5/outputs/pol"
 
 PATH_KITTI_MOTS_YOLO = "/ghome/c5mcv03/KITTI-MOTS-YOLO"
 PATH_KITTI_MOTS_YOLO_SEGMENTATION = "/ghome/c5mcv03/KITTI-MOTS-YOLO-segmentation"
+PATH_KITTI_MOTS_YOLO_SEGMENTATION_LOCAL = "/projects/master/c5/KITTI-MOTS-YOLO-segmentation"
 PATH_KITTI_MOTS_YOLO_ALL = "/ghome/c5mcv03/KITTI-MOTS-YOLO-train_val"
 
 PATH_KITTI_MOTS_YOLO_LOCAL = "/projects/master/c5/KITTI-MOTS-YOLO"
