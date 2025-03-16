@@ -52,7 +52,7 @@ if __name__ == "__main__":
         save_period=50,
         
         plots=False,
-        # device='cuda',
+        device='cuda',
         project=args.output_path,
         name=f"custom_augmentations_freeze21_long_run",
     )
