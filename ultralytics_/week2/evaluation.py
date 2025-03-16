@@ -10,7 +10,7 @@ import consts
 def validate_model(model, output_path, split_val=True, val_name="off-the-shelf evaluation"):
     results = model.val(data=os.path.join(consts.PATH_KITTI_MOTS_YOLO_SEGMENTATION, "kitti_mots_config.yaml"),
                         classes=consts.YOLO_CLASSES, cache=False, project=output_path,
-                        split="val" if split_val else "train",
+                        split=split_val,
                         name=val_name)
 
     metrics_file = os.path.join(output_path, f"{val_name}_evaluation_metrics.txt")
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate YOLO model")
     parser.add_argument("--model_path", type=str, help="Path to the YOLO model")
     parser.add_argument("--output_path", type=str, help="Path to save the results", default="/ghome/c5mcv03/mcv-c5-group-3/outputs/pol/job_outputs")
-    parser.add_argument("--split_val", type=bool, help="Evaluate the validation set", default=True)
+    parser.add_argument("--split_val", type=str, help="Evaluate the validation set", default="val")
     parser.add_argument("--val_name", type=str, help="Name for the validation results", default="off-the-shelf evaluation")
     args = parser.parse_args()
 
