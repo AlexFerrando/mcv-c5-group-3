@@ -22,31 +22,37 @@ if __name__ == "__main__":
         data=config_dataset_path,
         classes=consts.YOLO_CLASSES,
         
-        epochs=30,
+        epochs=50,
         optimizer="AdamW",
-        freeze=None,
+        freeze=21,
         
-        lr0=0.0005,
-        warmup_epochs=6,
-        mask_ratio=4,
-        batch=0.7,
+        lr0=0.017162956662722863,
+        lrf=0.8346365649678075,
+        momentum=0.7070979831851115,
+        weight_decay=0.0007452824661310931,
+        warmup_epochs=4,
+        warmup_momentum=0.8201039478474136,
+        batch=0.4,
         
-        hsv_h=0.015,
-        hsv_s=0.7,
-        hsv_v=0.4,
-        translate=0.1,
-        scale=0.5,
-        fliplr=0.5,
+        imgsz=1024, 
+        hsv_h=0.0914214125150458,
+        hsv_s=0.4023838445250445,
+        hsv_v=0.13262171333213696,
+        
+        translate=0.018423185082522452,
+        scale=0.29359083344271464,
+        fliplr=0.08606952789145506,
+        
         mosaic=1.0,
         erasing=0.4,
         crop_fraction=1.0,
         # auto_augment='autoaugment'
         
-        patience=20,
+        patience=10,
         save_period=50,
         
         plots=False,
-        device='cuda',
+        # device='cuda',
         project=args.output_path,
-        name=f"default_yolo_segment_adamw_0.0005lr0",
+        name=f"custom_augmentations_freeze21_long_run",
     )
