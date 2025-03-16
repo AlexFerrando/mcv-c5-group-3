@@ -2,6 +2,7 @@
 KITTI_MOTS
 huggingface/week1/evaluation_results
 huggingface/week2/Evaluation_off-the-shelf
+detectron2/cppe5_images
 jobs_pol/
 *.yaml
 *job_*
