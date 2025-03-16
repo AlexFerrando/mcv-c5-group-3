@@ -1,4 +1,5 @@
 import os
+import consts
 import numpy as np
 from typing import List, Optional
 from datasets import Dataset, DatasetDict, Features, Image as HFImage, Value, Sequence
@@ -69,7 +70,9 @@ class VideoDataset:
                     }
 
                 # Convert the mask to a nested list of float32 values
-                frames_info[image_id]["annotations"]["class_labels"].append(category_id)
+                frames_info[image_id]["annotations"]["class_labels"].append(
+                    consts.KIITI_TO_MODEL_IDS[category_id]
+                )
                 frames_info[image_id]["annotations"]["masks"].append(rle_mask)
 
         return frames_info

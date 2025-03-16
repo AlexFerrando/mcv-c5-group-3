@@ -34,6 +34,7 @@ training_args = TrainingArguments(
     push_to_hub=False,
     logging_dir="./outputs/alex/logs",
     logging_steps=25,
+    eval_accumulation_steps=5,
 )
 
 
@@ -84,7 +85,7 @@ if __name__ == '__main__':
         eval_dataset=val_data,
         processing_class=image_processor,
         data_collator=collate_fn,
-        compute_metrics=compute_metrics,
+        # compute_metrics=compute_metrics,
     )
     trainer.add_callback(WandbCallback())
 
