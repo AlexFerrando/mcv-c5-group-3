@@ -8,7 +8,7 @@ import consts
 
 
 def validate_model(model, output_path, split_val=True, val_name="off-the-shelf evaluation"):
-    results = model.val(data=os.path.join(consts.PATH_KITTI_MOTS_YOLO_SEGMENTATION, "kitti_mots_config.yaml"),
+    results = model.val(data=os.path.join(consts.PATH_KITTI_MOTS_YOLO_SEGMENTATION_ALL, "kitti_mots_config.yaml"),
                         classes=consts.YOLO_CLASSES, cache=False, project=output_path,
                         split=split_val,
                         name=val_name)
