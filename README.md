@@ -93,7 +93,8 @@ Some remarkabe hyperparameters used for each framework are explicitly mentioned 
 - **Mask R-CNN:**
   - Fine-tuned using Detectron2 framework
   - Hyperparameters:
-    - Batch size: `96
+    - Batch size: `128`
+    - Images per batch: `8`
     - Training iterations: `6000`
 
 - **YOLO-SEG:**
