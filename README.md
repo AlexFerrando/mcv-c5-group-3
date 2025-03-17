@@ -100,7 +100,7 @@ Some remarkabe hyperparameters used for each framework are explicitly mentioned 
 - **YOLO-SEG:**
   - Fine-tuned using Ultralytics framework
   - Hyperparameters:
-    - Batch size: `[Insert Value]`
+    - Batch size: `16`
     - Learning rate: `0.01716`
     - Freeze layers: `21`
 
