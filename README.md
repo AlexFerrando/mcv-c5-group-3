@@ -227,13 +227,19 @@ We ran inference using pre-trained **Mask2Former, Mask R-CNN, and YOLO-SEG** mod
 Example frames of our models running inference on the **KITTI-MOTS** dataset:
 
 **Mask2Former**  
-`[Insert Image: assets/imgs_week2/Mask2Former_example.png]`
+<p align="center">
+    <img src="assets/imgs_week2/Mask2Former_example.png" width="700"/>
+</p>
 
 **Mask R-CNN**  
-`[Insert Image: assets/imgs_week2/MaskRCNN_example.png]`
+<p align="center">
+    <img src="assets/imgs_week2/MaskRCNN_example.png" width="700"/>
+</p>
 
 **YOLO-SEG**  
-`[Insert Image: assets/imgs_week2/YOLOSEG_example.png]`
+<p align="center">
+    <img src="assets/imgs_week2/Yolo_example.png" width="700"/>
+</p>
 
 ### Task B: Fine-tuning on KITTI-MOTS dataset
 
