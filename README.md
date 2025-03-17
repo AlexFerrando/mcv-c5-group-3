@@ -227,17 +227,17 @@ We ran inference using pre-trained **Mask2Former, Mask R-CNN, and YOLO-SEG** mod
 Example frames of our models running inference on the **KITTI-MOTS** dataset:
 
 **Mask2Former**  
-<p align="center">
+<p>
     <img src="assets/imgs_week2/Mask2Former_example.png" width="700"/>
 </p>
 
 **Mask R-CNN**  
-<p align="center">
+<p>
     <img src="assets/imgs_week2/MaskRCNN_example.png" width="700"/>
 </p>
 
 **YOLO-SEG**  
-<p align="center">
+<p>
     <img src="assets/imgs_week2/Yolo_example.png" width="700"/>
 </p>
 
@@ -282,16 +282,26 @@ Performance comparison before and after fine-tuning. Evaluation has been run usi
 | **YOLO-SEG (off-the-shelf)**  | `0.536` | `0.641` | `0.430` |
 | **YOLO-SEG (fine-tuned)**    | `0.598` | `0.698` | `0.497` |
 
+<p align="center">
+    <img src="assets/imgs_week2/map_results.png" width="700"/>
+</p>
+
 #### Qualitative Results
 
 **Mask2Former Fine-Tuned**  
-`[Insert Image: assets/imgs_week2/Mask2Former_FT.png]`
+<p>
+    <img src="assets/imgs_week2/Mask2Former_ft.png" width="700"/>
+</p>
 
 **Mask R-CNN Fine-Tuned**  
-`[Insert Image: assets/imgs_week2/MaskRCNN_FT.png]`
+<p>
+    <img src="assets/imgs_week2/MaskRCNN_ft.png" width="700"/>
+</p>
 
 **YOLO-SEG Fine-Tuned**  
-`[Insert Image: assets/imgs_week2/YOLOSEG_FT.png]`
+<p>
+    <img src="assets/imgs_week2/Yolo_ft.png" width="700"/>
+</p>
 
 ### Task C: Fine-tuning on PanNuke dataset for domain shift
 
@@ -310,12 +320,18 @@ For domain adaptation, we fine-tuned **Mask2Former** on the **PanNuke dataset**,
 | **Mask2Former (off-the-shelf)** | `0.332` | 
 | **Mask2Former (fine-tuned on PanNuke)** | `0.417` |
 
-Specific mAP for Neoplastic, Inflammatory, Connective, dead and Epithelial can be found in the slides of the week. Th model showed improvements across all categories after being finetuned, being Neoplastic the one with higher mAP and Dead the one with less accuracy.
+The model showed improvements across all categories after being finetuned, being Neoplastic the one with higher mAP and Dead the one with less accuracy.
+
+<p align="center">
+    <img src="assets/imgs_week2/map_shift_domain.png" width="700"/>
+</p>
 
 #### Qualitative Results
 
 **Mask2Former on PanNuke (Fine-Tuned)**  
-`[Insert Image: assets/imgs_week2/Mask2Former_PanNuke.png]`
+<p align="center">
+    <img src="assets/imgs_week2/shift_domain.png" width="700"/>
+</p>
 
 ---
 
