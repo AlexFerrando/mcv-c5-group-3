@@ -6,6 +6,7 @@ detectron2/cppe5_images
 jobs_pol/
 *.yaml
 *job_*
+archive/
 
 
 # Byte-compiled / optimized / DLL files
