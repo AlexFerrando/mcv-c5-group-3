@@ -21,8 +21,156 @@ Team 3 repository of the [C5 - Visual Recognition](https://mcv.uab.cat/c5-visual
 
 * The code is organized as follows:
     - Each model code is divided into its own folder [detectron2](/mcv-c5-group-3/detectron2/), [huggingface](/mcv-c5-group-3/huggingface/) and [ultralytics_](/mcv-c5-group-3/ultralytics_/).
+---
 
-## Week 1
+# Week 2
+
+[*Slides for week2*](https://docs.google.com/presentation/d/1E8pM2xe69j2h7esztA5vYWLZqnIpwhBelGV84MnWKZo/edit#slide=id.g340d9e9dd17_0_361)
+Week 2 focused on **Instance Segmentation**, continuing to use the **KITTI-MOTS** dataset. This time, we tested three models across different frameworks:
+
+- **Mask2Former** (Hugging Face)
+- **Mask R-CNN** (Detectron2)
+- **YOLO-SEG** (Ultralytics)
+
+The week's tasks were:
+
+a) **Inference on KITTI-MOTS dataset with off-the-shelf models**  
+b) **Fine-tuning on KITTI-MOTS dataset**  
+c) **Fine-tuning on PanNuke dataset for domain shift** (histopathology segmentation)
+
+### Task A: Inference on KITTI-MOTS dataset with off-the-shelf models
+
+We ran inference using pre-trained **Mask2Former, Mask R-CNN, and YOLO-SEG** models on **KITTI-MOTS**. This involved setting up the respective environments, loading the pre-trained weights, and processing the dataset to generate instance segmentation predictions.
+
+**Implementation Details:**
+
+- **Environment Setup:** Followed the same approach as in Week 1 for each framework:
+  - Hugging Face for **Mask2Former**
+  - Detectron2 for **Mask R-CNN**
+  - Ultralytics for **YOLO-SEG**
+
+- **Model Loading:** Pre-trained weights were obtained from Hugging Face Hub, Detectron2 model zoo, and Ultralytics.
+
+- **Inference Execution:** Scripts used for inference are found within each framework, inside the corresponding week2.
+  - Mask2Former: `./huggingface/week2/inference.py`
+  - Mask R-CNN: `./detectron2/week2/inference.py`
+  - YOLO-SEG: `ultralytics_/week2/inference.py`
+
+#### Qualitative Results
+
+Example frames of our models running inference on the **KITTI-MOTS** dataset:
+
+**Mask2Former**  
+<p>
+    <img src="assets/imgs_week2/Mask2Former_example.png" width="700"/>
+</p>
+
+**Mask R-CNN**  
+<p>
+    <img src="assets/imgs_week2/MaskRCNN_example.png" width="700"/>
+</p>
+
+**YOLO-SEG**  
+<p>
+    <img src="assets/imgs_week2/Yolo_example.png" width="700"/>
+</p>
+
+### Task B: Fine-tuning on KITTI-MOTS dataset
+
+To improve segmentation performance, we fine-tuned the models using the **KITTI-MOTS** dataset.
+
+#### Fine-tuning Strategy
+
+Some remarkabe hyperparameters used for each framework are explicitly mentioned here although you can check all the specific ones used + the augmentations employed in the corresponding `finetuning.py` file within each framework in week2 folder.
+
+- **Mask2Former:**
+  - Last layers fine-tuned
+  - Hyperparameters used:
+    - Learning rate: `5e-5`
+    - Weight decay: `1e-4`
+    - Epochs: `15`
+
+- **Mask R-CNN:**
+  - Fine-tuned using Detectron2 framework
+  - Hyperparameters:
+    - Batch size: `128`
+    - Images per batch: `8`
+    - Training iterations: `6000`
+
+- **YOLO-SEG:**
+  - Fine-tuned using Ultralytics framework
+  - Hyperparameters:
+    - Batch size: `16`
+    - Learning rate: `0.01716`
+    - Freeze layers: `21`
+
+#### Evaluation Results
+
+Performance comparison before and after fine-tuning. Evaluation has been run using the same metrics we used in week 1. This case, Mask R-CNN was the one that showed better results for instance segmentation task on KITTI-MOTS both before and after finetuning.
+
+| Model        | mAP@0.5 | mAP@0.5 (Car) | mAP@0.5 (Pedestrian) |
+|-------------|---------|--------------|----------------------|
+| **Mask2Former (off-the-shelf)** | `0.342` | `0.517` | `0.117` |
+| **Mask2Former (fine-tuned)**   | `0.547` | `0.651` | `0.444` |
+| **Mask R-CNN (off-the-shelf)** | `0.790` | `0.976` | `0.604` |
+| **Mask R-CNN (fine-tuned)**   | `0.870` | `0.980` | `0.660` |
+| **YOLO-SEG (off-the-shelf)**  | `0.536` | `0.641` | `0.430` |
+| **YOLO-SEG (fine-tuned)**    | `0.598` | `0.698` | `0.497` |
+
+<p align="center">
+    <img src="assets/imgs_week2/map_results.png" width="700"/>
+</p>
+
+#### Qualitative Results
+
+**Mask2Former Fine-Tuned**  
+<p>
+    <img src="assets/imgs_week2/Mask2Former_ft.png" width="700"/>
+</p>
+
+**Mask R-CNN Fine-Tuned**  
+<p>
+    <img src="assets/imgs_week2/MaskRCNN_ft.png" width="700"/>
+</p>
+
+**YOLO-SEG Fine-Tuned**  
+<p>
+    <img src="assets/imgs_week2/Yolo_ft.png" width="700"/>
+</p>
+
+### Task C: Fine-tuning on PanNuke dataset for domain shift
+
+For domain adaptation, we fine-tuned **Mask2Former** on the **PanNuke dataset**, which contains nuclei segmentation in histopathology images.
+
+#### Fine-tuning Strategy
+
+- **Dataset:** PanNuke (nuclei instance segmentation)
+- **Data Split:** 80%-20% train-validation split
+- Code for finetuning can be found in `detectron2/week2/shift_domain.py` and inference can be executed when having the finetuned model in `detectron2/week2/shift_domain_inference.py`.
+
+#### Evaluation Results
+
+| Model          | mAP@0.5 |
+|---------------|---------|
+| **Mask2Former (off-the-shelf)** | `0.332` | 
+| **Mask2Former (fine-tuned on PanNuke)** | `0.417` |
+
+The model showed improvements across all categories after being finetuned, being Neoplastic the one with higher mAP and Dead the one with less accuracy.
+
+<p align="center">
+    <img src="assets/imgs_week2/map_shift_domain.png" width="700"/>
+</p>
+
+#### Qualitative Results
+
+**Mask2Former on PanNuke (Fine-Tuned)**  
+<p align="center">
+    <img src="assets/imgs_week2/shift_domain.png" width="700"/>
+</p>
+
+---
+
+# Week 1
 Week 1 focused on object detection. The summary slides of our work during this week can be found [here](https://docs.google.com/presentation/d/1RshITh9NvEmbJ8ndc5DF7OZFQ5BvnOvzYS6pJQe3nA0/edit#slide=id.g31bab77bdae_0_0):
 
 This section details our efforts in inference, training, and validation of three prominent deep learning models:
@@ -189,133 +337,6 @@ The final detection results are presented in the plot below:
 <p align="center">
     <img src="assets/imgs_week1/fine-tuning_domain_shift.png" width="700"/>
 </p>
-
-## Week 2
-
-Week 2 focused on **Instance Segmentation**, continuing to use the **KITTI-MOTS** dataset. This time, we tested three models across different frameworks:
-
-- **Mask2Former** (Hugging Face)
-- **Mask R-CNN** (Detectron2)
-- **YOLO-SEG** (Ultralytics)
-
-The week's tasks were:
-
-a) **Inference on KITTI-MOTS dataset with off-the-shelf models**  
-b) **Fine-tuning on KITTI-MOTS dataset**  
-c) **Fine-tuning on PanNuke dataset for domain shift** (histopathology segmentation)
-
-### Task A: Inference on KITTI-MOTS dataset with off-the-shelf models
-
-We ran inference using pre-trained **Mask2Former, Mask R-CNN, and YOLO-SEG** models on **KITTI-MOTS**. This involved setting up the respective environments, loading the pre-trained weights, and processing the dataset to generate instance segmentation predictions.
-
-**Implementation Details:**
-
-- **Environment Setup:** Followed the same approach as in Week 1 for each framework:
-  - Hugging Face for **Mask2Former**
-  - Detectron2 for **Mask R-CNN**
-  - Ultralytics for **YOLO-SEG**
-
-- **Model Loading:** Pre-trained weights were obtained from Hugging Face Hub, Detectron2 model zoo, and Ultralytics.
-
-- **Inference Execution:** Scripts used for inference are found within each framework, inside the corresponding week2.
-  - Mask2Former: `./huggingface/week2/inference.py`
-  - Mask R-CNN: `./detectron2/week2/inference.py`
-  - YOLO-SEG: `ultralytics_/week2/inference.py`
-
-#### Qualitative Results
-
-Example frames of our models running inference on the **KITTI-MOTS** dataset:
-
-**Mask2Former**  
-<p align="center">
-    <img src="assets/imgs_week2/Mask2Former_example.png" width="700"/>
-</p>
-
-**Mask R-CNN**  
-<p align="center">
-    <img src="assets/imgs_week2/MaskRCNN_example.png" width="700"/>
-</p>
-
-**YOLO-SEG**  
-<p align="center">
-    <img src="assets/imgs_week2/Yolo_example.png" width="700"/>
-</p>
-
-### Task B: Fine-tuning on KITTI-MOTS dataset
-
-To improve segmentation performance, we fine-tuned the models using the **KITTI-MOTS** dataset.
-
-#### Fine-tuning Strategy
-
-Some remarkabe hyperparameters used for each framework are explicitly mentioned here although you can check all the specific ones used + the augmentations employed in the corresponding `finetuning.py` file within each framework in week2 folder.
-
-- **Mask2Former:**
-  - Last layers fine-tuned
-  - Hyperparameters used:
-    - Learning rate: `5e-5`
-    - Weight decay: `1e-4`
-    - Epochs: `15`
-
-- **Mask R-CNN:**
-  - Fine-tuned using Detectron2 framework
-  - Hyperparameters:
-    - Batch size: `96
-    - Training iterations: `6000`
-
-- **YOLO-SEG:**
-  - Fine-tuned using Ultralytics framework
-  - Hyperparameters:
-    - Batch size: `[Insert Value]`
-    - Learning rate: `0.01716`
-    - Freeze layers: `21`
-
-#### Evaluation Results
-
-Performance comparison before and after fine-tuning. Evaluation has been run using the same metrics we used in week 1. This case, Mask R-CNN was the one that showed better results for instance segmentation task on KITTI-MOTS both before and after finetuning.
-
-| Model        | mAP@0.5 | mAP@0.5 (Car) | mAP@0.5 (Pedestrian) |
-|-------------|---------|--------------|----------------------|
-| **Mask2Former (off-the-shelf)** | `0.342` | `0.517` | `0.117` |
-| **Mask2Former (fine-tuned)**   | `0.547` | `0.651` | `0.444` |
-| **Mask R-CNN (off-the-shelf)** | `0.790` | `0.976` | `0.604` |
-| **Mask R-CNN (fine-tuned)**   | `0.870` | `0.980` | `0.660` |
-| **YOLO-SEG (off-the-shelf)**  | `0.536` | `0.641` | `0.430` |
-| **YOLO-SEG (fine-tuned)**    | `0.598` | `0.698` | `0.497` |
-
-#### Qualitative Results
-
-**Mask2Former Fine-Tuned**  
-`[Insert Image: assets/imgs_week2/Mask2Former_FT.png]`
-
-**Mask R-CNN Fine-Tuned**  
-`[Insert Image: assets/imgs_week2/MaskRCNN_FT.png]`
-
-**YOLO-SEG Fine-Tuned**  
-`[Insert Image: assets/imgs_week2/YOLOSEG_FT.png]`
-
-### Task C: Fine-tuning on PanNuke dataset for domain shift
-
-For domain adaptation, we fine-tuned **Mask2Former** on the **PanNuke dataset**, which contains nuclei segmentation in histopathology images.
-
-#### Fine-tuning Strategy
-
-- **Dataset:** PanNuke (nuclei instance segmentation)
-- **Data Split:** 80%-20% train-validation split
-- Code for finetuning can be found in `detectron2/week2/shift_domain.py` and inference can be executed when having the finetuned model in `detectron2/week2/shift_domain_inference.py`.
-
-#### Evaluation Results
-
-| Model          | mAP@0.5 |
-|---------------|---------|
-| **Mask2Former (off-the-shelf)** | `0.332` | 
-| **Mask2Former (fine-tuned on PanNuke)** | `0.417` |
-
-Specific mAP for Neoplastic, Inflammatory, Connective, dead and Epithelial can be found in the slides of the week. Th model showed improvements across all categories after being finetuned, being Neoplastic the one with higher mAP and Dead the one with less accuracy.
-
-#### Qualitative Results
-
-**Mask2Former on PanNuke (Fine-Tuned)**  
-`[Insert Image: assets/imgs_week2/Mask2Former_PanNuke.png]`
 
 ---
 
