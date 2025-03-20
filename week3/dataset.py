@@ -33,9 +33,11 @@ class FoodDataset(Dataset):
         return self.process_image(img_path), self.process_text(title)
 
     def process_image(self, img_path: Path) -> Image.Image:
-        # to be implemented
+        # to be implemented, segurament haurem de pasar algun transform al dataset
+        # que sera dependent del model que fem servir
         return Image.open(img_path).convert('RGB')
     
     def process_text(self, text: str):
-        # to be implemented
+        # to be implemented, segurament haurem de pasar algun tokenitzador al dataset
+        # que sera dependent del model que fem servir
         return text
