@@ -21,6 +21,7 @@ def train(
     optimizer: torch.optim.Optimizer,
     tokenizer: BaseTokenizer,
     epochs: int = 10,
+    patience: int = 3,  # Patience parameter added
     device: torch.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
     config: dict = None, # New parameter for sweep
 ):
@@ -43,6 +44,7 @@ def train(
 
     model.to(device)
     best_val_loss = float('inf')
+    patience_counter = 0  # Initialize patience counter
     
     for epoch in range(epochs):
         print('Epoch:', epoch)
@@ -63,15 +65,24 @@ def train(
             **{f"val_{k}": v for k, v in val_metrics.items()}
         }
         
-        # Save best model
+        # Save best model if validation loss improves
         if val_loss < best_val_loss:
             best_val_loss = val_loss
+            patience_counter = 0  # Reset the patience counter on improvement
             #torch.save(model.state_dict(), "best_model.pth")
             wandb.save("best_model.pth")
             log_data["best_val_loss"] = best_val_loss
+        else:
+            patience_counter += 1  # Increment patience counter if no improvement
+            print(f"No improvement in validation loss. Patience counter: {patience_counter}/{patience}")
         
         wandb.log(log_data)
         print('-------------------')
+
+        # Check early stopping condition
+        if patience_counter >= patience:
+            print(f"Early stopping triggered after {epoch+1} epochs.")
+            break
     
     # Final evaluation with test set
     test_loss, test_metrics = eval_epoch(model, criterion, test_loader, tokenizer, device, metric)
@@ -84,7 +95,6 @@ def train(
     })
     
     wandb.finish()
-
 
 def train_epoch(
     model: torch.nn.Module,
