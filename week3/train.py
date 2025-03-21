@@ -21,7 +21,7 @@ def train(
     optimizer: torch.optim.Optimizer,
     tokenizer: BaseTokenizer,
     epochs: int = 10,
-    patience: int = 3,  # Patience parameter added
+    patience: int = 10,  # Patience parameter added
     device: torch.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
     config: dict = None, # New parameter for sweep
 ):
@@ -256,7 +256,8 @@ if __name__ == '__main__':
         'batch_size': 32,
         'optimizer': 'adam',
         'weight_decay': 0.01,
-        'epochs': 10
+        'epochs': 300,
+        'patience': 10
     }
 
     """
