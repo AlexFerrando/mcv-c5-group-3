@@ -22,7 +22,7 @@ class BaselineModel(nn.Module):
         batch_size = img.shape[0]
         feat = self.resnet(img)
         feat = feat.pooler_output.squeeze(-1).squeeze(-1).unsqueeze(0) # 1, batch, 512
-        start = torch.tensor(self.tokenizer.encode('<SOS>'))
+        start = torch.tensor(self.tokenizer.char2idx[self.tokenizer.sos_token])
         start_embed = self.embed(start) # 512
         start_embeds = start_embed.repeat(batch_size, 1).unsqueeze(0) # 1, batch, 512
         inp = start_embeds

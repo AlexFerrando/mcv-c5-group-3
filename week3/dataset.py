@@ -4,15 +4,18 @@ import pandas as pd
 from PIL import Image
 from typing import Tuple
 from torchtune.modules.tokenizers._utils import BaseTokenizer
+import torch
 
 class FoodDataset(Dataset):
     def __init__(
             self,
             data_path: str,
             tokenizer: BaseTokenizer,
+            transform: torch.nn.Sequential,
         ):
         data_path = Path(data_path)
         self.tokenizer = tokenizer
+        self.transform = transform
         
         # Define df
         self.df = pd.read_csv(data_path / 'Food Ingredients and Recipe Dataset with Image Name Mapping.csv')
@@ -20,6 +23,8 @@ class FoodDataset(Dataset):
         self.df = self.df[['Title', 'Image_Name']]
         # Remove rows with invalid 'Image_Name' entries (e.g., '#NAME?')
         self.df = self.df[self.df['Image_Name'] != '#NAME?']
+        # Remove nans
+        self.df = self.df.dropna() # There are 5 nans xd
 
         # Define image_path
         self.images_folder = data_path / 'Food Images/Food Images'
@@ -29,7 +34,7 @@ class FoodDataset(Dataset):
     def __len__(self) -> int:
         return len(self.df)
     
-    def __getitem__(self, idx: int) -> Tuple[Image.Image, str]:
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         row = self.df.iloc[idx]
         title = row['Title']
         # img_name we have to add .jpg
@@ -38,10 +43,9 @@ class FoodDataset(Dataset):
         
         return self.process_image(img_path), self.process_text(title)
 
-    def process_image(self, img_path: Path) -> Image.Image:
-        # to be implemented, segurament haurem de pasar algun transform al dataset
-        # que sera dependent del model que fem servir
-        return Image.open(img_path).convert('RGB')
+    def process_image(self, img_path: Path) -> torch.Tensor:
+        image = Image.open(img_path).convert('RGB')
+        return self.transform(image)
     
-    def process_text(self, text: str):
-        return self.tokenizer.encode(text)
+    def process_text(self, text: str) -> torch.Tensor:
+        return torch.Tensor(self.tokenizer.encode(text))

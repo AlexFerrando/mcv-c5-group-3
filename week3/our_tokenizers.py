@@ -10,7 +10,7 @@ class CharacterTokenizer(BaseTokenizer):
         self.sos_token = '<SOS>'
         self.eos_token = '<EOS>'
         self.pad_token = '<PAD>'
-        self.chars = [self.sos_token, self.eos_token, self.pad_token, ' ', '!', '"', '#', '&', "'", '(', ')', ',', '-', '.', '<', '>', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '=', '?', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
+        self.chars = [self.sos_token, self.eos_token, self.pad_token, '\n', ' ', '!', '"', '#', '%', '&', "'", '(', ')', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '9', ':', ';', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '\x92', '\x96', '\xa0', '®', 'Á', 'É', 'à', 'á', 'â', 'ã', 'ä', 'ç', 'è', 'é', 'ê', 'ë', 'ì', 'í', 'î', 'ï', 'ñ', 'ò', 'ó', 'ô', 'ö', 'ø', 'ù', 'ú', 'û', 'ü', 'ō', 'ơ', '̀', '́', '̃', '̉', 'С', 'и', 'к', 'н', 'р', 'ы', '\u2009', '–', '—', '‘', '’', '“', '”', '강', '개', '닭', '된', '장', '전', '정', '찌', '파']
         self.idx2char = {k: v for k, v in enumerate(self.chars)}
         self.char2idx = {v: k for k, v in enumerate(self.chars)}
         self.text_max_len = text_max_len

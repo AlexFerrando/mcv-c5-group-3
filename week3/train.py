@@ -6,6 +6,8 @@ from models import BaselineModel
 from torch.utils.data import DataLoader
 from torch import nn
 import torch
+from torchvision.transforms import v2
+from tqdm import tqdm
 
 
 def train(
@@ -24,10 +26,12 @@ def train(
 
     model.to(device)
     for epoch in range(epochs):
+        print('Epoch:', epoch)
         loss, res = train_epoch(model, optimizer, criterion, metric, train_loader, device, tokenizer)
         print(f'train loss: {loss:.2f}, metric: {res:.2f}, epoch: {epoch}')
         loss_v, res_v = eval_epoch(model, criterion, metric, val_loader, device, tokenizer)
         print(f'valid loss: {loss_v:.2f}, metric: {res_v:.2f}')
+        print('-------------------')
     loss_t, res_t = eval_epoch(model, criterion, metric, test_loader, device)
     print(f'test loss: {loss_t:.2f}, metric: {res_t:.2f}')
     
@@ -44,12 +48,13 @@ def train_epoch(
     all_texts = []
     losses = []
     model.train()
-    for img, text in dataloader:
+
+    for img, text in tqdm(dataloader, desc='Training epoch'):
         optimizer.zero_grad()
         img: torch.Tensor = img.to(device)
         text: torch.Tensor = text.to(device)
         out: torch.Tensor = model(img)
-        loss: torch.Tensor = criterion(out, text)
+        loss: torch.Tensor = criterion(out, text.long())
         loss.backward()
         optimizer.step()
 
@@ -75,11 +80,11 @@ def eval_epoch(
     all_texts = []
     losses = []
     model.eval()
-    for img, text in dataloader:
+    for img, text in tqdm(dataloader, desc='Evaluation step'):
         img: torch.Tensor = img.to(device)
         text: torch.Tensor = text.to(device)
         out: torch.Tensor = model(img)
-        loss: torch.Tensor = criterion(out, text)
+        loss: torch.Tensor = criterion(out, text.long())
 
         # Save the outputs and texts for the metric
         all_outs.append(out.detach().cpu())
@@ -106,10 +111,29 @@ if __name__ == '__main__':
     ########### DATA ###########
     """
     tokenizer = CharacterTokenizer()
-    dataset = FoodDataset(
-        data_path=consts.DATA_PATH_ALEX,
-        tokenizer=tokenizer
+    transform = nn.Sequential(
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Resize((224, 224), antialias=True),
+        v2.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     )
+    dataset = FoodDataset(
+        data_path=consts.DATA_PATH,
+        tokenizer=tokenizer,
+        transform=transform
+    )
+
+    # characters = set()
+    # for item in dataset:
+    #     for char in item:
+    #         characters.add(char)
+
+    
+    # print(sorted(list(characters)))
+    # assert False
+        
+
+    
     # Split 80% train, 10% val, 10% test
     train_size, val_size, test_size = get_split_sizes(len(dataset), 0.8, 0.1, 0.1)
     train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(
@@ -126,27 +150,30 @@ if __name__ == '__main__':
     """
     model = BaselineModel(tokenizer=tokenizer)
     
-    # """
-    # ########### OPTIMIZER ###########"
-    # """
-    # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    """
+    ########### OPTIMIZER ###########"
+    """
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     
-    # """
-    # ########### TRAINING ###########"
-    # """
-    # train(
-    #     model,
-    #     train_loader, val_loader, test_loader,
-    #     optimizer=optimizer,
-    #     tokenizer=tokenizer,
-    #     epochs=10,
-    #     # device=torch.device('cpu')
-    # )
+    """
+    ########### TRAINING ###########"
+    """
+    train(
+        model,
+        train_loader, val_loader, test_loader,
+        optimizer=optimizer,
+        tokenizer=tokenizer,
+        epochs=10,
+        # device=torch.device('cpu')
+    )
 
-    enc = tokenizer.encode('Hello')
-    print(enc)
-    dec = tokenizer.decode(enc)
-    print(dec)
+    # enc = tokenizer.encode('Hello')
+    # print(enc)
+    # print(len(enc))
+    # dec = tokenizer.decode(enc)
+    # print(dec)
+    # print(len(dec))
+
 
     # out = model(torch.randn(2, 3, 224, 224))
     # print(out.shape)
