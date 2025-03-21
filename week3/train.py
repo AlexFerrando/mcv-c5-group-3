@@ -78,7 +78,8 @@ def eval_epoch(
         out: torch.Tensor = model(img)
         loss: torch.Tensor = criterion(out, text.long())
         losses.append(loss.detach().cpu().item())
-
+        
+        # AIXO POTSER S'HA DE CANVIAR PER ALTERS MODELS!
         texts = model.logits_to_text(out)
         all_texts.extend(texts)
         all_texts_gt.extend([tokenizer.decode(t.tolist()) for t in text])
