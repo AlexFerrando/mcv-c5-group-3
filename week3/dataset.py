@@ -3,10 +3,16 @@ from pathlib import Path
 import pandas as pd
 from PIL import Image
 from typing import Tuple
+from torchtune.modules.tokenizers._utils import BaseTokenizer
 
 class FoodDataset(Dataset):
-    def __init__(self, data_path: str):
+    def __init__(
+            self,
+            data_path: str,
+            tokenizer: BaseTokenizer,
+        ):
         data_path = Path(data_path)
+        self.tokenizer = tokenizer
         
         # Define df
         self.df = pd.read_csv(data_path / 'Food Ingredients and Recipe Dataset with Image Name Mapping.csv')
@@ -38,6 +44,4 @@ class FoodDataset(Dataset):
         return Image.open(img_path).convert('RGB')
     
     def process_text(self, text: str):
-        # to be implemented, segurament haurem de pasar algun tokenitzador al dataset
-        # que sera dependent del model que fem servir
-        return text
+        return self.tokenizer.encode(text)
