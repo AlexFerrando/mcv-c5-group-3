@@ -25,6 +25,8 @@ class FoodDataset(Dataset):
         self.df = self.df[self.df['Image_Name'] != '#NAME?']
         # Remove nans
         self.df = self.df.dropna() # There are 5 nans xd
+        # Take only 10 samples
+        self.df = self.df.head(10)
 
         # Define image_path
         self.images_folder = data_path / 'Food Images/Food Images'

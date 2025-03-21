@@ -8,12 +8,8 @@ class Metric():
         self.meteor = evaluate.load('meteor')
         self.rouge = evaluate.load('rouge')
 
-    def compute_metrics(self, ground_truth: List[List[str]], prediction: List[str]):
-        ground_truth = [['A child in a pink dress is climbing up a set of stairs in an entry way .', 'A girl going into a wooden building .']]
-        prediction = ['A girl goes into a wooden building .']
-
+    def compute_metrics(self, ground_truth: List[str], prediction: List[str]):
         res_b = self.bleu.compute(predictions=prediction, references=ground_truth)
         res_r = self.rouge.compute(predictions=prediction, references=ground_truth)
         res_m = self.meteor.compute(predictions=prediction, references=ground_truth)
-
-        return res_b, res_r, res_m
+        return {'bleu': res_b, 'rouge': res_r, 'meteor': res_m}

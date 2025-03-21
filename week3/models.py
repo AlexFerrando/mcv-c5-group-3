@@ -22,7 +22,7 @@ class BaselineModel(nn.Module):
         batch_size = img.shape[0]
         feat = self.resnet(img)
         feat = feat.pooler_output.squeeze(-1).squeeze(-1).unsqueeze(0) # 1, batch, 512
-        start = torch.tensor(self.tokenizer.char2idx[self.tokenizer.sos_token])
+        start = torch.tensor(self.tokenizer.char2idx[self.tokenizer.sos_token]).to(img.device)
         start_embed = self.embed(start) # 512
         start_embeds = start_embed.repeat(batch_size, 1).unsqueeze(0) # 1, batch, 512
         inp = start_embeds
@@ -35,3 +35,15 @@ class BaselineModel(nn.Module):
         res = self.proj(res) # batch, seq, 80
         res = res.permute(0, 2, 1) # batch, 80, seq
         return res
+    
+    def logits_to_text(self, logits: torch.Tensor) -> list[str]:
+        """
+        Converts model logits to text sequences.
+        Args:
+            logits: (batch, vocab_size, sequence_length)
+        Returns:
+            List of decoded strings.
+        """
+        indices = torch.argmax(logits, dim=1)  # (batch, sequence_length)
+        texts = [self.tokenizer.decode(seq.tolist()) for seq in indices]
+        return texts
