@@ -282,7 +282,7 @@ if __name__ == '__main__':
     )
     
     dataset = FoodDataset(
-        data_path=consts.DATA_PATH_POL,
+        data_path=consts.DATA_PATH,
         tokenizer=tokenizer,
         transform=transform
     )   
