@@ -1,5 +1,6 @@
 from torchtune.modules.tokenizers._utils import BaseTokenizer
 from typing import List, Dict, Any
+from transformers import AutoTokenizer
 
 class CharacterTokenizer(BaseTokenizer):
     def __init__(
@@ -38,3 +39,83 @@ class CharacterTokenizer(BaseTokenizer):
 
     def __len__(self):
         return len(self.chars)
+    
+class WordTokenizer:
+    def __init__(self, texts: List[str] = None, text_max_len: int = 50):
+        self.sos_token = "<SOS>"
+        self.eos_token = "<EOS>"
+        self.pad_token = "<PAD>"
+        self.unk_token = "<UNK>"
+        self.text_max_len = text_max_len
+
+        self.vocab = [self.sos_token, self.eos_token, self.pad_token, self.unk_token]
+
+        if texts:
+            self.build_vocab(texts)
+        else:
+            self.word2idx = {}
+            self.idx2word = {}
+
+    def build_vocab(self, texts: List[str]):
+        words = set()
+        for text in texts:
+            tokens = text.split()
+            words.update(tokens)
+        self.vocab += sorted(words)
+        self.word2idx = {word: idx for idx, word in enumerate(self.vocab)}
+        self.idx2word = {idx: word for word, idx in self.word2idx.items()}
+
+    def encode(self, text: str) -> List[int]:
+        tokens = [self.sos_token] + text.split()[:self.text_max_len - 2] + [self.eos_token]
+        token_ids = [
+            self.word2idx.get(token, self.word2idx[self.unk_token]) for token in tokens
+        ]
+        token_ids += [self.word2idx[self.pad_token]] * (self.text_max_len - len(token_ids))
+        return token_ids
+
+    def decode(self, tokens: List[int]) -> str:
+        return " ".join([
+            self.idx2word.get(token, self.unk_token)
+            for token in tokens
+            if token not in {
+                self.word2idx[self.sos_token],
+                self.word2idx[self.eos_token],
+                self.word2idx[self.pad_token]
+            }
+        ])
+
+    def batch_decode(self, batch_tokens: List[List[int]]) -> List[str]:
+        return [self.decode(tokens) for tokens in batch_tokens]
+
+    def __len__(self):
+        return len(self.vocab)
+    
+class WordPieceTokenizer:
+    def __init__(self, pretrained_model_name="bert-base-cased", text_max_len=50):
+        self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name)
+        self.text_max_len = text_max_len
+
+    def encode(self, text: str) -> List[int]:
+        return self.tokenizer.encode(
+            text,
+            add_special_tokens=True,
+            max_length=self.text_max_len,
+            truncation=True,
+            padding="max_length"
+        )
+
+    def decode(self, tokens: List[int]) -> str:
+        return self.tokenizer.decode(tokens, skip_special_tokens=True)
+
+    def batch_decode(self, batch_tokens: List[List[int]]) -> List[str]:
+        return self.tokenizer.batch_decode(batch_tokens, skip_special_tokens=True)
+
+    def __len__(self):
+        return self.tokenizer.vocab_size
+
+# Function to remove blank spaces in BERT Tokenizer
+def clean_decoded_text(text: str) -> str:
+    text = text.replace(" - ", "-")        
+    text = text.replace(" ’ ", "’")         
+    text = " ".join(text.split())           
+    return text
