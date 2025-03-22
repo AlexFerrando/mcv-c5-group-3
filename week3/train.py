@@ -50,7 +50,7 @@ def train(
         print('Epoch:', epoch)
         
         # Training step
-        train_loss, train_metrics = train_epoch(model, optimizer, criterion, train_loader, device)
+        train_loss, train_metrics = train_epoch(model, optimizer, criterion, train_loader, tokenizer, device, metric)
         print(f'train loss: {train_loss:.2f}, metric: {train_metrics}')
         
         # Validation step
