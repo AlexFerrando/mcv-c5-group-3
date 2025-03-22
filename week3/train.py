@@ -50,8 +50,8 @@ def train(
         print('Epoch:', epoch)
         
         # Training step
-        train_loss = train_epoch(model, optimizer, criterion, train_loader, device)
-        print(f'train loss: {train_loss:.2f}')
+        train_loss, train_metrics = train_epoch(model, optimizer, criterion, train_loader, device)
+        print(f'train loss: {train_loss:.2f}, metric: {train_metrics}')
         
         # Validation step
         val_loss, val_metrics = eval_epoch(model, criterion, val_loader, tokenizer, device, metric)
@@ -62,7 +62,8 @@ def train(
             "epoch": epoch,
             "train_loss": train_loss,
             "val_loss": val_loss,
-            **{f"val_{k}": v for k, v in val_metrics.items()}
+            **{f"val_{k}": v for k, v in val_metrics.items()},
+            **{f"train_{k}": v for k, v in train_metrics.items()}
         }
         
         # Save best model if validation loss improves
@@ -107,8 +108,12 @@ def train_epoch(
     optimizer: torch.optim.Optimizer,
     criterion: torch.nn.Module,
     dataloader: DataLoader,
-    device: torch.device
-) -> float:  
+    tokenizer: BaseTokenizer,
+    device: torch.device,
+    metric: Metric
+) -> tuple:  
+    all_texts = []
+    all_texts_gt = []
     losses = []
     model.train()
     for img, text in tqdm(dataloader, desc='Training epoch'):
@@ -121,8 +126,12 @@ def train_epoch(
         loss.backward()
         optimizer.step()
         losses.append(loss.detach().cpu().item())
+        texts = model.logits_to_text(out)
+        all_texts.extend(texts)
+        all_texts_gt.extend([tokenizer.decode(t.tolist()) for t in text])
     mean_loss = sum(losses) / len(losses)
-    return mean_loss
+    res = metric.compute_metrics(all_texts_gt, all_texts)
+    return mean_loss, res
 
 
 def eval_epoch(
