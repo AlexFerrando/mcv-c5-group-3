@@ -50,7 +50,16 @@ def train(
         print('Epoch:', epoch)
         
         # Training step
-        train_loss, train_metrics = train_epoch(model, optimizer, criterion, train_loader, tokenizer, device, metric)
+        train_loss, train_metrics = train_epoch(
+            model, 
+            optimizer, 
+            criterion, 
+            train_loader, 
+            tokenizer, 
+            device, 
+            metric,
+            config
+        )
         print(f'train loss: {train_loss:.2f}, metric: {train_metrics}')
         
         # Validation step
@@ -75,17 +84,15 @@ def train(
             torch.save(model.state_dict(), config['model_name'])
             artifact = wandb.Artifact(name=config['model_name'].split('.')[0], type='model')  # Create artifact
             artifact.add_file(config['model_name'])
-            wandb.log_artifact(artifact)  # Upload to W&B
-            
+            wandb.log_artifact(artifact)
             log_data["best_val_loss"] = best_val_loss
         else:
-            patience_counter += 1  # Increment patience counter if no improvement
+            patience_counter += 1
             print(f"No improvement in validation loss. Patience counter: {patience_counter}/{patience}")
         
         wandb.log(log_data)
         print('-------------------')
 
-        # Check early stopping condition
         if patience_counter >= patience:
             print(f"Early stopping triggered after {epoch+1} epochs.")
             break
@@ -94,13 +101,16 @@ def train(
     test_loss, test_metrics = eval_epoch(model, criterion, test_loader, tokenizer, device, metric)
     print(f'test loss: {test_loss:.2f}, metric: {test_metrics}')
     
-    # Log test metrics
     wandb.log({
         "test_loss": test_loss,
         **{f"test_{k}": v for k, v in test_metrics.items()}
     })
     
     wandb.finish()
+
+
+def get_grad_norm(model):
+    return sum(p.grad.data.norm(2).item() ** 2 for p in model.parameters() if p.grad is not None) ** 0.5
 
 
 def train_epoch(
@@ -110,25 +120,39 @@ def train_epoch(
     dataloader: DataLoader,
     tokenizer: BaseTokenizer,
     device: torch.device,
-    metric: Metric
+    metric: Metric,
+    config: dict  # <--- so we can read gradient clipping settings
 ) -> tuple:  
     all_texts = []
     all_texts_gt = []
     losses = []
     model.train()
+    
+    use_grad_clipping = config.get('use_grad_clipping', True)  # <--- toggle from config
+    max_norm = config.get('gradient_max_norm', 5.0)
+    
     for img, text in tqdm(dataloader, desc='Training epoch'):
         optimizer.zero_grad()
         img = img.to(device)
         text = text.to(device)
         out = model(img)
-        #out = model(img, text)  # Add text to forward pass
         loss = criterion(out, text.long())
         loss.backward()
+
+        # --- Conditionally clip or just measure gradient norm ---
+        if use_grad_clipping:
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_norm)
+        else:
+            grad_norm = get_grad_norm(model)
+        wandb.log({"grad_norm": grad_norm}, commit=False)
+        
         optimizer.step()
         losses.append(loss.detach().cpu().item())
+        
         texts = model.logits_to_text(out)
         all_texts.extend(texts)
         all_texts_gt.extend([tokenizer.decode(t.tolist()) for t in text])
+    
     mean_loss = sum(losses) / len(losses)
     res = metric.compute_metrics(all_texts_gt, all_texts)
     return mean_loss, res
@@ -169,6 +193,24 @@ def get_split_sizes(dataset_len, train_size, val_size, test_size):
     return train_size, val_size, test_size
 
 
+def get_optimizer(config):
+    if config['optimizer'] == 'adam':
+        return torch.optim.Adam(
+            model.parameters(), 
+            lr=config['learning_rate'],
+            weight_decay=config['weight_decay']
+        )
+    elif config['optimizer'] == 'sgd':
+        return torch.optim.SGD(
+            model.parameters(), 
+            lr=config['learning_rate'],
+            momentum=config.get('momentum', 0.9),
+            weight_decay=config['weight_decay']
+        )
+    else:
+        raise ValueError(f"Unsupported optimizer: {config['optimizer']}")
+
+
 def sweep_train(config: dict):
     """
     Example sweep config:
@@ -204,6 +246,9 @@ def sweep_train(config: dict):
             'gradient_max_norm': {
                 'value': 5.0
             },
+            'use_grad_clipping': {
+                'values': [True, False]
+            },
             'model_name': {
                 'value': 'baseline.pth'
             },
@@ -215,8 +260,6 @@ def sweep_train(config: dict):
     """
     # Initialize the tokenizer
     tokenizer = CharacterTokenizer()
-
-    # Use the config for the transform (ensuring consistency)
     transform = nn.Sequential(
         v2.ToImage(),
         v2.ToDtype(torch.float32, scale=True),
@@ -244,21 +287,7 @@ def sweep_train(config: dict):
     model = BaselineModel(tokenizer=tokenizer, resnet_model=config['resnet_model'])
     
     # Choose optimizer based on config without modifying it
-    if config['optimizer'] == 'adam':
-        optimizer = torch.optim.Adam(
-            model.parameters(), 
-            lr=config['learning_rate'],
-            weight_decay=config['weight_decay']
-        )
-    elif config['optimizer'] == 'sgd':
-        optimizer = torch.optim.SGD(
-            model.parameters(), 
-            lr=config['learning_rate'],
-            momentum=config.get('momentum', 0.9),
-            weight_decay=config['weight_decay']
-        )
-    else:
-        raise ValueError(f"Unsupported optimizer: {config['optimizer']}")
+    optimizer = get_optimizer(config)
 
     # Call train with explicit parameters from config
     train(
@@ -293,6 +322,7 @@ if __name__ == '__main__':
         'patience': 5,
         'project': 'C5-W3',
         'gradient_max_norm': 5.0,
+        'use_grad_clipping': True,
         'model_name': 'baseline.pth',
         'resnet_model': 'microsoft/resnet-18'
     }
@@ -305,7 +335,6 @@ if __name__ == '__main__':
         v2.Resize(config['resize'], antialias=True),
         v2.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     )
-    
     dataset = FoodDataset(
         data_path=consts.DATA_PATH,
         tokenizer=tokenizer,
@@ -326,14 +355,8 @@ if __name__ == '__main__':
     
     model = BaselineModel(tokenizer=tokenizer, resnet_model=config['resnet_model'])
     
-    optimizer = torch.optim.Adam(
-        model.parameters(), 
-        lr=config['learning_rate'], 
-        weight_decay=config['weight_decay']
-    )
-    torch.nn.utils.clip_grad_norm_(model.parameters(), config['gradient_max_norm'])
-    
-    # Regular training call with explicit config parameters
+    optimizer = get_optimizer(config)
+
     train(
         model,
         train_loader,
@@ -346,8 +369,7 @@ if __name__ == '__main__':
         config=config
     )
 
-    atexit.register(cleanup_wandb)
-    
+    atexit.register(cleanup_wandb)    
     # Uncomment below to run a sweep (ensure you have set up your sweep config accordingly)
     # sweep_id = wandb.sweep(sweep_config, project="food-recognition-sweeps")
     # wandb.agent(sweep_id, func
