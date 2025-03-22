@@ -8,10 +8,11 @@ class BaselineModel(nn.Module):
     def __init__(
             self,
             tokenizer: CharacterTokenizer,
-            text_max_len: int = 201
+            text_max_len: int = 201,
+            resnet_model: str = 'microsoft/resnet-18'
         ):
         super().__init__()
-        self.resnet = ResNetModel.from_pretrained('microsoft/resnet-18')
+        self.resnet = ResNetModel.from_pretrained(resnet_model)
         self.gru = nn.GRU(512, 512, num_layers=1)
         self.proj = nn.Linear(512, len(tokenizer))
         self.embed = nn.Embedding(len(tokenizer), 512)
@@ -54,11 +55,12 @@ class LSTMModel(nn.Module):
             self,
             tokenizer: CharacterTokenizer,
             text_max_len: int = 201,
-            lstm_layers: int = 3,       # New parameter
-            dropout: float = 0.3        # New parameter
+            lstm_layers: int = 3,
+            dropout: float = 0.3,
+            resnet_model: str = 'microsoft/resnet-34'
         ):
         super().__init__()
-        self.resnet = ResNetModel.from_pretrained('microsoft/resnet-34')
+        self.resnet = ResNetModel.from_pretrained(resnet_model)
         
         # Enhanced LSTM configuration
         self.lstm = nn.LSTM(

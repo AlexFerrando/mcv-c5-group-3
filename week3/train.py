@@ -72,9 +72,9 @@ def train(
             patience_counter = 0  # Reset the patience counter on improvement
 
             # Save model
-            torch.save(model.state_dict(), "best_model.pth")  # Local
-            artifact = wandb.Artifact(name='best_model', type='model')  # Create artifact
-            artifact.add_file("best_model.pth")  
+            torch.save(model.state_dict(), config['model_name'])
+            artifact = wandb.Artifact(name=config['model_name'].split('.')[0], type='model')  # Create artifact
+            artifact.add_file(config['model_name'])
             wandb.log_artifact(artifact)  # Upload to W&B
             
             log_data["best_val_loss"] = best_val_loss
@@ -203,6 +203,12 @@ def sweep_train(config: dict):
             },
             'gradient_max_norm': {
                 'value': 5.0
+            },
+            'model_name': {
+                'value': 'baseline.pth'
+            },
+            'resnet_model': {
+                'value': 'microsoft/resnet-18'
             }
         }
     }
@@ -235,7 +241,7 @@ def sweep_train(config: dict):
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
     
-    model = LSTMModel(tokenizer=tokenizer)
+    model = BaselineModel(tokenizer=tokenizer, resnet_model=config['resnet_model'])
     
     # Choose optimizer based on config without modifying it
     if config['optimizer'] == 'adam':
@@ -286,7 +292,9 @@ if __name__ == '__main__':
         'epochs': 20,
         'patience': 5,
         'project': 'C5-W3',
-        'gradient_max_norm': 5.0
+        'gradient_max_norm': 5.0,
+        'model_name': 'baseline.pth',
+        'resnet_model': 'microsoft/resnet-18'
     }
 
     tokenizer = CharacterTokenizer()
@@ -316,7 +324,7 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
     
-    model = LSTMModel(tokenizer=tokenizer)
+    model = BaselineModel(tokenizer=tokenizer, resnet_model=config['resnet_model'])
     
     optimizer = torch.optim.Adam(
         model.parameters(), 
