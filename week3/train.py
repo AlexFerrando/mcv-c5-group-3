@@ -2,7 +2,7 @@ from dataset import FoodDataset
 from our_tokenizers import CharacterTokenizer, BaseTokenizer
 from metrics import Metric
 import consts
-from models import BaselineModel
+from models import BaselineModel, LSTMModel
 from torch.utils.data import DataLoader
 from torch import nn
 import torch
@@ -31,7 +31,8 @@ def train(
         project=config.get('project', 'C5-W3'),
         name=f"Baseline_{wandb.util.generate_id()}",
         config=config,
-        reinit=True
+        reinit=True,
+        mode="disabled" # Disable wandb logging for now
     )
     
     # Log model architecture
@@ -202,7 +203,7 @@ def sweep_train(config: dict):
     )
     
     dataset = FoodDataset(
-        data_path=consts.DATA_PATH_POL,
+        data_path=consts.DATA_PATH_ALEX,
         tokenizer=tokenizer,
         transform=transform
     )
@@ -218,7 +219,7 @@ def sweep_train(config: dict):
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
     
-    model = BaselineModel(tokenizer=tokenizer)
+    model = LSTMModel(tokenizer=tokenizer)
     
     # Choose optimizer based on config without modifying it
     if config['optimizer'] == 'adam':
@@ -263,7 +264,7 @@ if __name__ == '__main__':
     config = {
         'resize': (224, 224),
         'learning_rate': 1e-4,
-        'batch_size': 64,
+        'batch_size': 2,
         'optimizer': 'adam',
         'weight_decay': 1e-4,
         'epochs': 20,
@@ -282,7 +283,7 @@ if __name__ == '__main__':
     )
     
     dataset = FoodDataset(
-        data_path=consts.DATA_PATH,
+        data_path=consts.DATA_PATH_ALEX,
         tokenizer=tokenizer,
         transform=transform
     )   

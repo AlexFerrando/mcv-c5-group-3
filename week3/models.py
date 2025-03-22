@@ -48,6 +48,7 @@ class BaselineModel(nn.Module):
         texts = [self.tokenizer.decode(seq.tolist()) for seq in indices]
         return texts
 
+
 class LSTMModel(nn.Module):
     def __init__(
             self,
@@ -57,7 +58,7 @@ class LSTMModel(nn.Module):
             dropout: float = 0.3        # New parameter
         ):
         super().__init__()
-        self.resnet = ResNetModel.from_pretrained('microsoft/resnet-18')
+        self.resnet = ResNetModel.from_pretrained('microsoft/resnet-34')
         
         # Enhanced LSTM configuration
         self.lstm = nn.LSTM(
