@@ -29,7 +29,7 @@ def train(
     wandb.init(
         entity="arnalytics-universitat-aut-noma-de-barcelona",
         project=config.get('project', 'C5-W3'),
-        name=f"Baseline_{wandb.util.generate_id()}",
+        name=f"LSTM_{wandb.util.generate_id()}",
         config=config,
         reinit=True,
         mode="disabled" # Disable wandb logging for now
@@ -283,7 +283,7 @@ if __name__ == '__main__':
     )
     
     dataset = FoodDataset(
-        data_path=consts.DATA_PATH_ALEX,
+        data_path=consts.DATA_PATH,
         tokenizer=tokenizer,
         transform=transform
     )   
@@ -300,7 +300,7 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
     
-    model = BaselineModel(tokenizer=tokenizer)
+    model = LSTMModel(tokenizer=tokenizer)
     
     optimizer = torch.optim.Adam(
         model.parameters(), 
