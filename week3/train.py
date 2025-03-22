@@ -69,7 +69,13 @@ def train(
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             patience_counter = 0  # Reset the patience counter on improvement
-            wandb.save("best_model.pth")
+
+            # Save model
+            torch.save(model.state_dict(), "best_model.pth")  # Local
+            artifact = wandb.Artifact(name='best_model', type='model')  # Create artifact
+            artifact.add_file("best_model.pth")  
+            wandb.log_artifact(artifact)  # Upload to W&B
+            
             log_data["best_val_loss"] = best_val_loss
         else:
             patience_counter += 1  # Increment patience counter if no improvement
