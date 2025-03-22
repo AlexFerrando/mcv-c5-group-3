@@ -347,7 +347,7 @@ if __name__ == '__main__':
         v2.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     )
     dataset = FoodDataset(
-        data_path=consts.DATA_PATH_POL,
+        data_path=consts.DATA_PATH,
         tokenizer=tokenizer,
         transform=transform
     )   
