@@ -277,7 +277,7 @@ def sweep_train(config: dict):
     )
     
     dataset = FoodDataset(
-        data_path=consts.DATA_PATH_POL,
+        data_path=consts.DATA_PATH,
         tokenizer=tokenizer,
         transform=transform
     )
@@ -293,7 +293,7 @@ def sweep_train(config: dict):
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
     
-    model = BaselineModel(tokenizer=tokenizer, resnet_model=config['resnet_model'])
+    model = LSTMModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], lstm_layers=1)
     
     # Choose optimizer based on config without modifying it
     optimizer = get_optimizer(config)
@@ -333,7 +333,7 @@ if __name__ == '__main__':
         'gradient_max_norm': 5.0,
         'use_grad_clipping': True,
         'model_name': 'baseline.pth',
-        'resnet_model': 'microsoft/resnet-18',
+        'resnet_model': 'microsoft/resnet-34',
         'use_teacher_forcing': True,
         'detach_loop': False
     }
@@ -364,7 +364,7 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
     
-    model = BaselineModel(tokenizer=tokenizer, resnet_model=config['resnet_model'])
+    model = LSTMModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], lstm_layers=1)
     
     optimizer = get_optimizer(config)
 
