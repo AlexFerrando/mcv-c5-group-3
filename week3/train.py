@@ -29,7 +29,7 @@ def train(
     wandb.init(
         entity="arnalytics-universitat-aut-noma-de-barcelona",
         project=config.get('project', 'C5-W3'),
-        name=f"LSTM_{wandb.util.generate_id()}",
+        name=f"BASELINE_{wandb.util.generate_id()}",
         config=config,
         reinit=True,
         # mode="disabled" # Disable wandb logging for now
