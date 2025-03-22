@@ -32,7 +32,7 @@ def train(
         name=f"BASELINE_{wandb.util.generate_id()}",
         config=config,
         reinit=True,
-        # mode="disabled" # Disable wandb logging for now
+        # mode="offline" # Disable wandb logging for now
     )
     
     # Log model architecture
@@ -121,7 +121,7 @@ def train_epoch(
     tokenizer: BaseTokenizer,
     device: torch.device,
     metric: Metric,
-    config: dict  # <--- so we can read gradient clipping settings
+    config: dict
 ) -> tuple:  
     all_texts = []
     all_texts_gt = []
@@ -130,12 +130,18 @@ def train_epoch(
     
     use_grad_clipping = config.get('use_grad_clipping', True)  # <--- toggle from config
     max_norm = config.get('gradient_max_norm', 5.0)
-    
+    use_teacher_forcing = config.get('use_teacher_forcing', True)
+    detach_loop = config.get('detach_loop', False)
+
     for img, text in tqdm(dataloader, desc='Training epoch'):
         optimizer.zero_grad()
         img = img.to(device)
         text = text.to(device)
-        out = model(img)
+        if use_teacher_forcing:
+            out = model(img, target_seq=text, teacher_forcing=True, detach_loop=detach_loop)
+        else:
+            out = model(img, teacher_forcing=False, detach_loop=detach_loop)
+
         loss = criterion(out, text.long())
         loss.backward()
 
@@ -254,6 +260,9 @@ def sweep_train(config: dict):
             },
             'resnet_model': {
                 'value': 'microsoft/resnet-18'
+            },
+            'use_teacher_forcing': {          # <--- added teacher forcing option for sweeps
+                'values': [True, False]
             }
         }
     }
@@ -268,7 +277,7 @@ def sweep_train(config: dict):
     )
     
     dataset = FoodDataset(
-        data_path=consts.DATA_PATH,
+        data_path=consts.DATA_PATH_POL,
         tokenizer=tokenizer,
         transform=transform
     )
@@ -324,7 +333,9 @@ if __name__ == '__main__':
         'gradient_max_norm': 5.0,
         'use_grad_clipping': True,
         'model_name': 'baseline.pth',
-        'resnet_model': 'microsoft/resnet-18'
+        'resnet_model': 'microsoft/resnet-18',
+        'use_teacher_forcing': True,
+        'detach_loop': False
     }
 
     tokenizer = CharacterTokenizer()
@@ -336,7 +347,7 @@ if __name__ == '__main__':
         v2.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     )
     dataset = FoodDataset(
-        data_path=consts.DATA_PATH,
+        data_path=consts.DATA_PATH_POL,
         tokenizer=tokenizer,
         transform=transform
     )   
@@ -372,4 +383,4 @@ if __name__ == '__main__':
     atexit.register(cleanup_wandb)    
     # Uncomment below to run a sweep (ensure you have set up your sweep config accordingly)
     # sweep_id = wandb.sweep(sweep_config, project="food-recognition-sweeps")
-    # wandb.agent(sweep_id, func
+    # wandb.agent(sweep_id, func=sweep_train)
