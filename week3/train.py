@@ -183,6 +183,9 @@ def sweep_train(config: dict):
             },
             'resize': {
                 'value': (224, 224)
+            },
+            'gradient_max_norm': {
+                'value': 5.0
             }
         }
     }
@@ -259,13 +262,14 @@ if __name__ == '__main__':
 
     config = {
         'resize': (224, 224),
-        'learning_rate': 1e-3,
-        'batch_size': 32,
+        'learning_rate': 1e-4,
+        'batch_size': 64,
         'optimizer': 'adam',
-        'weight_decay': 0.01,
+        'weight_decay': 1e-4,
         'epochs': 300,
-        'patience': 300,
-        'project': 'C5-W3'
+        'patience': 30,
+        'project': 'C5-W3',
+        'gradient_max_norm': 5.0
     }
 
     tokenizer = CharacterTokenizer()
@@ -302,6 +306,7 @@ if __name__ == '__main__':
         lr=config['learning_rate'], 
         weight_decay=config['weight_decay']
     )
+    torch.nn.utils.clip_grad_norm_(model.parameters(), config['gradient_max_norm'])
     
     # Regular training call with explicit config parameters
     train(
