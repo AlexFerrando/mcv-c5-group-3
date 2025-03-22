@@ -104,7 +104,7 @@ class LSTMModel(nn.Module):
         inp = self.embed(inp).unsqueeze(0)  # (1, batch, 512)
         
         outputs = []
-        for t in range(self.text_max_len - 1):
+        for t in range(self.text_max_len):
             # LSTM forward pass
             out, (hidden, cell) = self.lstm(inp, (hidden, cell))
             

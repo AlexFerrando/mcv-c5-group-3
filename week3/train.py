@@ -32,7 +32,7 @@ def train(
         name=f"LSTM_{wandb.util.generate_id()}",
         config=config,
         reinit=True,
-        mode="disabled" # Disable wandb logging for now
+        # mode="disabled" # Disable wandb logging for now
     )
     
     # Log model architecture
@@ -264,7 +264,7 @@ if __name__ == '__main__':
     config = {
         'resize': (224, 224),
         'learning_rate': 1e-4,
-        'batch_size': 2,
+        'batch_size': 32,
         'optimizer': 'adam',
         'weight_decay': 1e-4,
         'epochs': 20,
