@@ -11,7 +11,15 @@ class CharacterTokenizer(BaseTokenizer):
         self.sos_token = '<SOS>'
         self.eos_token = '<EOS>'
         self.pad_token = '<PAD>'
-        self.chars = [self.sos_token, self.eos_token, self.pad_token, '\n', ' ', '!', '"', '#', '%', '&', "'", '(', ')', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '9', ':', ';', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '\x92', '\x96', '\xa0', '®', 'Á', 'É', 'à', 'á', 'â', 'ã', 'ä', 'ç', 'è', 'é', 'ê', 'ë', 'ì', 'í', 'î', 'ï', 'ñ', 'ò', 'ó', 'ô', 'ö', 'ø', 'ù', 'ú', 'û', 'ü', 'ō', 'ơ', '̀', '́', '̃', '̉', 'С', 'и', 'к', 'н', 'р', 'ы', '\u2009', '–', '—', '‘', '’', '“', '”', '강', '개', '닭', '된', '장', '전', '정', '찌', '파']
+        self.chars = [
+            self.sos_token, self.eos_token, self.pad_token, '\n', ' ', '!', '"', '#', '%', '&', "'", '(', ')', '+', ',',
+            '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '9', ':', ';', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+            'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd',
+            'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+            '\x92', '\x96', '\xa0', '®', 'Á', 'É', 'à', 'á', 'â', 'ã', 'ä', 'ç', 'è', 'é', 'ê', 'ë', 'ì', 'í', 'î', 'ï',
+            'ñ', 'ò', 'ó', 'ô', 'ö', 'ø', 'ù', 'ú', 'û', 'ü', 'ō', 'ơ', '̀', '́', '̃', '̉', 'С', 'и', 'к', 'н', 'р', 'ы',
+            '\u2009', '–', '—', '‘', '’', '“', '”', '강', '개', '닭', '된', '장', '전', '정', '찌', '파'
+        ]
         self.idx2char = {k: v for k, v in enumerate(self.chars)}
         self.char2idx = {v: k for k, v in enumerate(self.chars)}
         self.text_max_len = text_max_len
@@ -27,8 +35,11 @@ class CharacterTokenizer(BaseTokenizer):
         # Remove the <SOS> and <EOS> tokens
         tokens = [
             token for token in tokens 
-            if token not in 
-            [self.char2idx[self.sos_token], self.char2idx[self.eos_token], self.char2idx[self.pad_token]]
+            if token not in [
+                self.char2idx[self.sos_token], 
+                self.char2idx[self.eos_token], 
+                self.char2idx[self.pad_token]
+            ]
         ]
         return ''.join([self.idx2char.get(token, '') for token in tokens])
     
@@ -40,8 +51,9 @@ class CharacterTokenizer(BaseTokenizer):
     def __len__(self):
         return len(self.chars)
     
-class WordTokenizer:
-    def __init__(self, texts: List[str] = None, text_max_len: int = 50):
+class WordTokenizer(BaseTokenizer):
+    def __init__(self,text_max_len: int = 201):
+        super().__init__()
         self.sos_token = "<SOS>"
         self.eos_token = "<EOS>"
         self.pad_token = "<PAD>"
@@ -50,13 +62,10 @@ class WordTokenizer:
 
         self.vocab = [self.sos_token, self.eos_token, self.pad_token, self.unk_token]
 
-        if texts:
-            self.build_vocab(texts)
-        else:
-            self.word2idx = {}
-            self.idx2word = {}
+        self.word2idx = {}
+        self.idx2word = {}
 
-    def build_vocab(self, texts: List[str]):
+    def build_from_texts(self, texts: List[str]):
         words = set()
         for text in texts:
             tokens = text.split()
@@ -78,9 +87,9 @@ class WordTokenizer:
             self.idx2word.get(token, self.unk_token)
             for token in tokens
             if token not in {
-                self.word2idx[self.sos_token],
-                self.word2idx[self.eos_token],
-                self.word2idx[self.pad_token]
+                self.word2idx.get(self.sos_token, -1),
+                self.word2idx.get(self.eos_token, -1),
+                self.word2idx.get(self.pad_token, -1)
             }
         ])
 
@@ -90,7 +99,7 @@ class WordTokenizer:
     def __len__(self):
         return len(self.vocab)
     
-class WordPieceTokenizer:
+class WordPieceTokenizer(BaseTokenizer):
     def __init__(self, pretrained_model_name="bert-base-cased", text_max_len=50):
         self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name)
         self.text_max_len = text_max_len
