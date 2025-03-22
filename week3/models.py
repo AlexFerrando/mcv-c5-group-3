@@ -147,5 +147,7 @@ class LSTMModel(nn.Module):
         Returns:
             List of decoded strings
         """
-        indices = torch.argmax(logits, dim=1)
-        return [self.tokenizer.decode(seq.tolist()) for seq in indices]
+        indices = torch.argmax(logits, dim=1)  # (batch, sequence_length)
+    
+        return self.tokenizer.batch_decode(indices.tolist())
+    

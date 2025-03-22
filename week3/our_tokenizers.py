@@ -29,7 +29,12 @@ class CharacterTokenizer(BaseTokenizer):
             if token not in 
             [self.char2idx[self.sos_token], self.char2idx[self.eos_token], self.char2idx[self.pad_token]]
         ]
-        return ''.join([self.idx2char[token] for token in tokens])
+        return ''.join([self.idx2char.get(token, '') for token in tokens])
+    
+
+    def batch_decode(self, batch_tokens: List[List[int]], **kwargs: Dict[str, Any]) -> List[str]:
+        return [self.decode(tokens) for tokens in batch_tokens]
+
 
     def __len__(self):
         return len(self.chars)

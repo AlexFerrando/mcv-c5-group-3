@@ -39,7 +39,7 @@ def train(
     wandb.watch(model, log="all")
     
     # Set up criterion and metric
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.char2idx[tokenizer.pad_token])  # Ignore padding token
     metric = Metric()
 
     model.to(device)
@@ -116,6 +116,7 @@ def train_epoch(
         img = img.to(device)
         text = text.to(device)
         out = model(img)
+        #out = model(img, text)  # Add text to forward pass
         loss = criterion(out, text.long())
         loss.backward()
         optimizer.step()
@@ -209,7 +210,7 @@ def sweep_train(config: dict):
     )
     
     dataset = FoodDataset(
-        data_path=consts.DATA_PATH_ALEX,
+        data_path=consts.DATA_PATH,
         tokenizer=tokenizer,
         transform=transform
     )
