@@ -266,8 +266,8 @@ if __name__ == '__main__':
         'batch_size': 64,
         'optimizer': 'adam',
         'weight_decay': 1e-4,
-        'epochs': 300,
-        'patience': 30,
+        'epochs': 20,
+        'patience': 5,
         'project': 'C5-W3',
         'gradient_max_norm': 5.0
     }
