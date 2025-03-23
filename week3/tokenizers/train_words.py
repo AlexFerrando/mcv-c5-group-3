@@ -30,7 +30,7 @@ def train(model: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoad
         name=f"WORDS_BASELINE_RESNET34_NO_TEACHER{wandb.util.generate_id()}",
         config=config,
         reinit=True,
-        # mode="disabled" # Disable wandb logging for now
+        mode="offline" # Disable wandb logging for now
     )
     
     # Log model architecture
@@ -208,23 +208,29 @@ def get_optimizer(config):
     else:
         raise ValueError(f"Unsupported optimizer: {config['optimizer']}")
 
-def get_by_tokenizer(config, tokenizer):
+def get_by_tokenizer(config):
+    # Mapping from config name to the corresponding tokenizer class.
+    tokenizers = {
+         'chars': CharacterTokenizer,
+         'words': WordTokenizer,
+         'bert': WordPieceTokenizer,
+    }
+    if config['tokenizer'] not in tokenizers:
+         raise ValueError(f"Unsupported tokenizer: {config['tokenizer']}")
+    
+    # Instantiate the correct tokenizer automatically.
+    tokenizer = tokenizers[config['tokenizer']]()  
+
+    # Configure the loss criterion and starting token index based on the tokenizer type.
     if config['tokenizer'] == 'chars':
-        criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.char2idx[tokenizer.pad_token])
-        start_idx = tokenizer.char2idx[tokenizer.sos_token]
-        tokenizer = CharacterTokenizer()
-
+         criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.char2idx[tokenizer.pad_token])
+         start_idx = tokenizer.char2idx[tokenizer.sos_token]
     elif config['tokenizer'] == 'words':
-        criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.word2idx[tokenizer.pad_token])
-        start_idx = tokenizer.encode(tokenizer.sos_token)[0]
-        tokenizer = WordTokenizer()
-
+         criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.word2idx[tokenizer.pad_token])
+         start_idx = tokenizer.encode(tokenizer.sos_token)[0]
     elif config['tokenizer'] == 'bert':
-        criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.tokenizer.pad_token_id)
-        start_idx = tokenizer.tokenizer.cls_token_id or tokenizer.tokenizer.pad_token_id
-        tokenizer = WordPieceTokenizer()
-    else:
-        raise ValueError(f"Unsupported tokenizer: {config['tokenizer']}")
+         criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.tokenizer.pad_token_id)
+         start_idx = tokenizer.tokenizer.cls_token_id or tokenizer.tokenizer.pad_token_id
 
     return criterion, start_idx, tokenizer
 
@@ -254,10 +260,10 @@ if __name__ == '__main__':
         'resnet_model': 'microsoft/resnet-34',
         'use_teacher_forcing': False,
         'detach_loop': False,
-        'tokenizer': 'words' # chars/words/bert
+        'tokenizer': 'words'  # Use 'chars', 'words', or 'bert'
     }
 
-    _, _, tokenizer = get_by_tokenizer(config)
+    criterion, start_idx, tokenizer = get_by_tokenizer(config)
 
     transform = nn.Sequential(
         v2.ToImage(),
@@ -282,8 +288,6 @@ if __name__ == '__main__':
     train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
-    
-    _, start_idx, _ = get_by_tokenizer(config, tokenizer)
 
     # model = LSTMModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], lstm_layers=config['lstm_layers'], dropout=config['dropout'])
     model = BaselineModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], start_idx=start_idx)
@@ -302,7 +306,7 @@ if __name__ == '__main__':
         config=config
     )
 
-    atexit.register(cleanup_wandb)    
+    atexit.register(cleanup_wandb)
     # Uncomment below to run a sweep (ensure you have set up your sweep config accordingly)
     # sweep_id = wandb.sweep(sweep_config, project="food-recognition-sweeps")
     # wandb.agent(sweep_id, func
