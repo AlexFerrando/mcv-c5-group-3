@@ -27,8 +27,9 @@ class Metric():
             nltk.download('omw-1.4', quiet=True)
 
     def compute_metrics(self, ground_truth: List[str], prediction: List[str]):
-        res_b = self.bleu.compute(predictions=prediction, references=ground_truth)
+        res_b1 = self.bleu.compute(predictions=prediction, references=ground_truth, max_order=1)
+        res_b2 = self.bleu.compute(predictions=prediction, references=ground_truth, max_order=2)
         res_r = self.rouge.compute(predictions=prediction, references=ground_truth)
         res_m = self.meteor.compute(predictions=prediction, references=ground_truth)
 
-        return {'bleu': res_b, 'rouge': res_r, 'meteor': res_m}
+        return {'bleu1': res_b1, 'bleu2': res_b2, 'rouge': res_r, 'meteor': res_m}

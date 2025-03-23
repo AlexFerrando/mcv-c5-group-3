@@ -2,7 +2,7 @@ from dataset import FoodDataset
 from our_tokenizers import CharacterTokenizer, BaseTokenizer
 from metrics import Metric
 import consts
-from models import BaselineModel, LSTMModel
+from models import BaselineModel, LSTMModel, LSTMWithAttention
 from torch.utils.data import DataLoader
 from torch import nn
 import torch
@@ -29,7 +29,7 @@ def train(
     wandb.init(
         entity="arnalytics-universitat-aut-noma-de-barcelona",
         project=config.get('project', 'C5-W3'),
-        name=f"BASELINE_{wandb.util.generate_id()}",
+        name=f"ATTENTION_{wandb.util.generate_id()}",
         config=config,
         reinit=True,
         # mode="offline" # Disable wandb logging for now
@@ -324,7 +324,7 @@ if __name__ == '__main__':
         'resize': (224, 224),
         'lstm_layers': 1,
         'learning_rate': 1e-4,
-        'batch_size': 32,
+        'batch_size': 2,
         'optimizer': 'adam',
         'weight_decay': 1e-4,
         'epochs': 20,
@@ -364,9 +364,9 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
     
-    model = LSTMModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], lstm_layers=config['lstm_layers'])
+    model = LSTMWithAttention(tokenizer=tokenizer, resnet_model=config['resnet_model'], lstm_layers=config['lstm_layers'])
     
-    optimizer = get_optimizer(config)
+    optimizer = get_optimizer(config, model)
 
     train(
         model,

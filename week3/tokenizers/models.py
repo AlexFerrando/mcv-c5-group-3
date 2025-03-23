@@ -12,7 +12,8 @@ class BaselineModel(nn.Module):
             self,
             tokenizer: CharacterTokenizer,
             text_max_len: int = 201,
-            resnet_model: str = 'microsoft/resnet-18'
+            resnet_model: str = 'microsoft/resnet-18',
+            start_idx=None
         ):
         super().__init__()
         self.resnet = ResNetModel.from_pretrained(resnet_model)
@@ -22,23 +23,46 @@ class BaselineModel(nn.Module):
         self.tokenizer = tokenizer
         self.text_max_len = text_max_len
 
-    def forward(self, img):
+        if start_idx is None:
+            self.start_idx = self.tokenizer.char2idx[self.tokenizer.sos_token]
+
+    def forward(self, img, target_seq=None, teacher_forcing=False, detach_loop=False):
         batch_size = img.shape[0]
         feat = self.resnet(img)
         feat = feat.pooler_output.squeeze(-1).squeeze(-1).unsqueeze(0) # 1, batch, 512
-        start_idx = self.tokenizer.encode(self.tokenizer.sos_token)[0]
-        start = torch.tensor(start_idx).to(img.device)
+        
+        start = torch.tensor(self.start_idx).to(img.device)
         start_embed = self.embed(start) # 512
         start_embeds = start_embed.repeat(batch_size, 1).unsqueeze(0) # 1, batch, 512
-        inp = start_embeds
+
         hidden = feat
-        for t in range(self.text_max_len - 1): # -1 because we already have the <SOS> token
-            out, hidden = self.gru(inp, hidden)
-            inp = torch.cat((inp, out[-1:]), dim=0) # N, batch, 512
-    
-        res = inp.permute(1, 0, 2) # batch, seq, 512
-        res = self.proj(res) # batch, seq, 80
-        res = res.permute(0, 2, 1) # batch, 80, seq
+        outputs = [start_embeds]  # store the SOS embedding as first output
+
+        if teacher_forcing and target_seq is not None:
+            # Expect target_seq of shape (batch, seq_len) with SOS at index 0.
+            seq_len = target_seq.shape[1]
+            for t in range(1, seq_len):
+                # Ground-truth input embedding at time t
+                inp = self.embed(target_seq[:, t].long()).unsqueeze(0)  # (1, batch, 512)
+                out, hidden = self.gru(inp, hidden)
+                outputs.append(out)
+                if detach_loop:
+                    # Optionally detach the hidden state even when using teacher forcing.
+                    hidden = hidden.detach()
+        else:
+            # Autoregressive generation
+            inp = start_embeds
+            for t in range(self.text_max_len - 1):  # -1 because SOS is provided
+                out, hidden = self.gru(inp, hidden)
+                # Depending on detach_loop, choose whether to cut the gradient flow.
+                last_out = out[-1:] if not detach_loop else out[-1:].detach()
+                outputs.append(last_out)
+                inp = last_out
+
+        res = torch.cat(outputs, dim=0)  # (seq_len, batch, 512)
+        res = res.permute(1, 0, 2)  # (batch, seq_len, 512)
+        res = self.proj(res)  # (batch, seq_len, vocab_size)
+        res = res.permute(0, 2, 1)  # (batch, vocab_size, seq_len)
         return res
     
     def logits_to_text(self, logits: torch.Tensor) -> list[str]:

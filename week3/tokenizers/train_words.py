@@ -8,6 +8,7 @@ from torchvision.transforms import v2
 from tqdm import tqdm
 import wandb
 import atexit
+import time
 
 from dataset import FoodDataset
 from models import BaselineModel, LSTMModel
@@ -26,7 +27,7 @@ def train(model: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoad
     wandb.init(
         entity="arnalytics-universitat-aut-noma-de-barcelona",
         project=config.get('project', 'C5-W3'),
-        name=f"BASELINE_{wandb.util.generate_id()}",
+        name=f"WORDS_BASELINE_RESNET34_NO_TEACHER{wandb.util.generate_id()}",
         config=config,
         reinit=True,
         # mode="disabled" # Disable wandb logging for now
@@ -112,18 +113,26 @@ def train_epoch(model: torch.nn.Module, optimizer: torch.optim.Optimizer, criter
     losses = []
     model.train()
     
-    use_grad_clipping = config.get('use_grad_clipping', True)  # <--- toggle from config
+    use_grad_clipping = config.get('use_grad_clipping', True)
     max_norm = config.get('gradient_max_norm', 5.0)
-    
+    use_teacher_forcing = config.get('use_teacher_forcing', True)
+    detach_loop = config.get('detach_loop', False)
+
+    start_time = time.time()
+    total_iterations = len(dataloader)
+
     for img, text in tqdm(dataloader, desc='Training epoch'):
         optimizer.zero_grad()
         img = img.to(device)
         text = text.to(device)
-        out = model(img)
+        if use_teacher_forcing:
+            out = model(img, target_seq=text, teacher_forcing=True, detach_loop=detach_loop)
+        else:
+            out = model(img, teacher_forcing=False, detach_loop=detach_loop)
+
         loss = criterion(out, text.long())
         loss.backward()
 
-        # --- Conditionally clip or just measure gradient norm ---
         if use_grad_clipping:
             grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_norm)
         else:
@@ -137,6 +146,11 @@ def train_epoch(model: torch.nn.Module, optimizer: torch.optim.Optimizer, criter
         all_texts.extend(texts)
         all_texts_gt.extend([tokenizer.decode(t.tolist()) for t in text])
     
+    end_time = time.time()
+    total_time = end_time - start_time
+    iterations_per_second = total_iterations / total_time
+    print(f"Average training speed: {iterations_per_second:.2f} iterations/s")
+
     mean_loss = sum(losses) / len(losses)
     res = metric.compute_metrics(all_texts_gt, all_texts)
     return mean_loss, res
@@ -206,6 +220,8 @@ if __name__ == '__main__':
 
     config = {
         'resize': (224, 224),
+        'lstm_layers': 2,
+        'dropout': 0.5,
         'learning_rate': 1e-4,
         'batch_size': 32,
         'optimizer': 'adam',
@@ -216,10 +232,12 @@ if __name__ == '__main__':
         'gradient_max_norm': 5.0,
         'use_grad_clipping': True,
         'model_name': 'baseline.pth',
-        'resnet_model': 'microsoft/resnet-18'
+        'resnet_model': 'microsoft/resnet-34',
+        'use_teacher_forcing': False,
+        'detach_loop': False
     }
 
-    tokenizer = WordTokenizer(text_max_len=50)
+    tokenizer = WordTokenizer()
 
     transform = nn.Sequential(
         v2.ToImage(),
@@ -228,7 +246,7 @@ if __name__ == '__main__':
         v2.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     )
     dataset = FoodDataset(
-        data_path=consts.DATA_PATH_URI,
+        data_path=consts.DATA_PATH,
         tokenizer=tokenizer,
         transform=transform
     )   
@@ -245,6 +263,7 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
     
+    # model = LSTMModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], lstm_layers=config['lstm_layers'], dropout=config['dropout'])
     model = BaselineModel(tokenizer=tokenizer, resnet_model=config['resnet_model'])
     
     optimizer = get_optimizer(config)
