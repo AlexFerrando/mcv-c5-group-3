@@ -293,7 +293,7 @@ def sweep_train(config: dict):
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
     
-    model = LSTMModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], lstm_layers=1)
+    model = LSTMModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], lstm_layers=config['lstm_layers'])
     
     # Choose optimizer based on config without modifying it
     optimizer = get_optimizer(config, model)
@@ -320,67 +320,58 @@ def cleanup_wandb():
 if __name__ == '__main__':
     wandb.login(key='89f4c571fd157f9b9bd2d73a2e6c39eb0ed38ad2')
 
-    config = {
-        'resize': (224, 224),
-        'lstm_layers': 1,
-        'learning_rate': 1e-4,
-        'batch_size': 32,
-        'optimizer': 'adam',
-        'weight_decay': 1e-4,
-        'epochs': 20,
-        'patience': 5,
-        'project': 'C5-W3',
-        'gradient_max_norm': 5.0,
-        'use_grad_clipping': True,
-        'model_name': 'baseline.pth',
-        'resnet_model': 'microsoft/resnet-34',
-        'use_teacher_forcing': True,
-        'detach_loop': False
+
+    sweep_config = {
+        'method': 'grid',
+        'metric': {
+            'name': 'val_loss',
+            'goal': 'minimize'   
+        },
+        'parameters': {
+            'learning_rate': {
+                'values': [1e-4]
+            },
+            'lstm_layers': {
+                'values': [5, 10]
+            },
+            'batch_size': {
+                'values': [32]
+            },
+            'optimizer': {
+                'values': ['adam']
+            },
+            'weight_decay': {
+                'values': [1e-4]
+            },
+            'epochs': {
+                'value': 30
+            },
+            'patience': {
+                'value': 10
+            },
+            'resize': {
+                'value': (224, 224)
+            },
+            'gradient_max_norm': {
+                'value': 5.0
+            },
+            'use_grad_clipping': {
+                'values': [False]
+            },
+            'model_name': {
+                'value': 'baseline.pth'
+            },
+            'resnet_model': {
+                'value': 'microsoft/resnet-18'
+            },
+            'use_teacher_forcing': {          # <--- added teacher forcing option for sweeps
+                'values': [True]
+            }
+        }
     }
 
-    tokenizer = CharacterTokenizer()
-
-    transform = nn.Sequential(
-        v2.ToImage(),
-        v2.ToDtype(torch.float32, scale=True),
-        v2.Resize(config['resize'], antialias=True),
-        v2.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-    )
-    dataset = FoodDataset(
-        data_path=consts.DATA_PATH,
-        tokenizer=tokenizer,
-        transform=transform
-    )   
-
-    # Split dataset: 80% train, 10% val, 10% test
-    train_size, val_size, test_size = get_split_sizes(len(dataset), 0.8, 0.1, 0.1)
-    train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(
-        dataset,
-        [train_size, val_size, test_size],
-        generator=torch.Generator().manual_seed(consts.SEED)
-    )
-    
-    train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
-    
-    model = LSTMModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], lstm_layers=config['lstm_layers'])
-    
-    optimizer = get_optimizer(config)
-
-    train(
-        model,
-        train_loader,
-        val_loader,
-        test_loader,
-        optimizer=optimizer,
-        tokenizer=tokenizer,
-        epochs=config['epochs'],
-        patience=config['patience'],
-        config=config
-    )
+    # Uncomment below to run a sweep (ensure you have set up your sweep config accordingly)
+    sweep_id = wandb.sweep(sweep_config, project="C5-W3", entity="arnalytics-universitat-aut-noma-de-barcelona")
+    wandb.agent(sweep_id, func=sweep_train)
 
     atexit.register(cleanup_wandb)    
-    # Uncomment below to run a sweep (ensure you have set up your sweep config accordingly)
-    # sweep_id = wandb.sweep(sweep_config, project="food-recognition-sweeps")
-    # wandb.agent(sweep_id, func=sweep_train)
