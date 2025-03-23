@@ -100,7 +100,7 @@ class WordTokenizer(BaseTokenizer):
         return len(self.vocab)
     
 class WordPieceTokenizer(BaseTokenizer):
-    def __init__(self, pretrained_model_name="bert-base-cased", text_max_len=50):
+    def __init__(self, pretrained_model_name="bert-base-cased", text_max_len=201):
         self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name)
         self.text_max_len = text_max_len
 
