@@ -62,8 +62,8 @@ class WordTokenizer(BaseTokenizer):
 
         self.vocab = [self.sos_token, self.eos_token, self.pad_token, self.unk_token]
 
-        self.word2idx = {}
-        self.idx2word = {}
+        self.word2idx = {word: idx for idx, word in enumerate(self.vocab)}
+        self.idx2word = {idx: word for word, idx in self.word2idx.items()}
 
     def build_from_texts(self, texts: List[str]):
         words = set()

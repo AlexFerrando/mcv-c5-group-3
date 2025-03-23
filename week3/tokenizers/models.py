@@ -23,8 +23,18 @@ class BaselineModel(nn.Module):
         self.tokenizer = tokenizer
         self.text_max_len = text_max_len
 
-        if start_idx is None:
-            self.start_idx = self.tokenizer.char2idx[self.tokenizer.sos_token]
+        if start_idx is not None:
+            self.start_idx = start_idx
+        else:
+            if hasattr(self.tokenizer, 'char2idx'):
+                self.start_idx = self.tokenizer.char2idx[self.tokenizer.sos_token]
+            elif hasattr(self.tokenizer, 'word2idx'):
+                self.start_idx = self.tokenizer.word2idx[self.tokenizer.sos_token]
+            elif hasattr(self.tokenizer, 'tokenizer'):
+                self.start_idx = self.tokenizer.tokenizer.cls_token_id or self.tokenizer.tokenizer.pad_token_id
+            else:
+                raise ValueError("Unable to determine start index for the tokenizer.")
+
 
     def forward(self, img, target_seq=None, teacher_forcing=False, detach_loop=False):
         batch_size = img.shape[0]
