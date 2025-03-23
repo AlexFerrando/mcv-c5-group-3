@@ -37,8 +37,8 @@ def train(model: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoad
     wandb.watch(model, log="all")
     
     # Set up criterion and metric
-    # criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.char2idx[tokenizer.pad_token])  # Ignore padding token
-    criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.word2idx[tokenizer.pad_token])
+
+    criterion, _, _ = get_by_tokenizer(config)
 
     metric = Metric()
 
@@ -208,6 +208,25 @@ def get_optimizer(config):
     else:
         raise ValueError(f"Unsupported optimizer: {config['optimizer']}")
 
+def get_by_tokenizer(config, tokenizer):
+    if config['tokenizer'] == 'chars':
+        criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.char2idx[tokenizer.pad_token])
+        start_idx = tokenizer.char2idx[tokenizer.sos_token]
+        tokenizer = CharacterTokenizer()
+
+    elif config['tokenizer'] == 'words':
+        criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.word2idx[tokenizer.pad_token])
+        start_idx = tokenizer.encode(tokenizer.sos_token)[0]
+        tokenizer = WordTokenizer()
+
+    elif config['tokenizer'] == 'bert':
+        criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.tokenizer.pad_token_id)
+        start_idx = tokenizer.tokenizer.cls_token_id or tokenizer.tokenizer.pad_token_id
+        tokenizer = WordPieceTokenizer()
+    else:
+        raise ValueError(f"Unsupported tokenizer: {config['tokenizer']}")
+
+    return criterion, start_idx, tokenizer
 
 def cleanup_wandb():
     os.environ.pop('WANDB_API_KEY', None)
@@ -234,10 +253,11 @@ if __name__ == '__main__':
         'model_name': 'baseline.pth',
         'resnet_model': 'microsoft/resnet-34',
         'use_teacher_forcing': False,
-        'detach_loop': False
+        'detach_loop': False,
+        'tokenizer': 'words' # chars/words/bert
     }
 
-    tokenizer = WordTokenizer()
+    _, _, tokenizer = get_by_tokenizer(config)
 
     transform = nn.Sequential(
         v2.ToImage(),
@@ -263,8 +283,10 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
     
+    _, start_idx, _ = get_by_tokenizer(config, tokenizer)
+
     # model = LSTMModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], lstm_layers=config['lstm_layers'], dropout=config['dropout'])
-    model = BaselineModel(tokenizer=tokenizer, resnet_model=config['resnet_model'])
+    model = BaselineModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], start_idx=start_idx)
     
     optimizer = get_optimizer(config)
 
