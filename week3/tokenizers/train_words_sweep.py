@@ -367,6 +367,9 @@ if __name__ == '__main__':
             'min': 0.8,
             'max': 1.0
         },
+        'use_lr_decay': {
+            'values': [True, False]
+        }
     }
 }
 
