@@ -95,7 +95,8 @@ class LSTMModel(nn.Module):
             text_max_len: int = 201,
             lstm_layers: int = 3,
             dropout: float = 0.3,
-            resnet_model: str = 'microsoft/resnet-34'
+            resnet_model: str = 'microsoft/resnet-34',
+            start_idx = None
         ):
         super().__init__()
         self.resnet = ResNetModel.from_pretrained(resnet_model)
@@ -126,7 +127,24 @@ class LSTMModel(nn.Module):
         # Visual feature projection layer
         self.visual_proj = nn.Linear(512, 512)
 
-    def forward(self, img):
+        if start_idx is not None:
+            self.start_idx = start_idx
+        else:
+            if hasattr(self.tokenizer, 'char2idx'):
+                self.start_idx = self.tokenizer.char2idx[self.tokenizer.sos_token]
+            elif hasattr(self.tokenizer, 'word2idx'):
+                self.start_idx = self.tokenizer.word2idx[self.tokenizer.sos_token]
+            elif hasattr(self.tokenizer, 'tokenizer'):
+                self.start_idx = self.tokenizer.tokenizer.cls_token_id or self.tokenizer.tokenizer.pad_token_id
+            else:
+                raise ValueError("Unable to determine start index for the tokenizer.")
+
+    def forward(self, img, target_seq=None, teacher_forcing=False, detach_loop=True):
+        assert not teacher_forcing, "Teacher forcing not supported for this model."
+        assert detach_loop, "Detaching the loop is required for this model."
+        if target_seq is not None:
+            raise ValueError("Target sequence should not be provided for this model.")
+
         batch_size = img.shape[0]
         
         # Extract visual features
@@ -139,8 +157,7 @@ class LSTMModel(nn.Module):
         cell = torch.zeros_like(hidden).to(img.device)
         
         # Initial sequence
-        start_idx = self.tokenizer.encode(self.tokenizer.sos_token)[0]
-        start_id = torch.tensor(start_idx).to(img.device)
+        start_id = torch.tensor(self.start_idx).to(img.device)
         inp = torch.full((batch_size,), start_id, device=img.device)
         inp = self.embed(inp).unsqueeze(0)  # (1, batch, 512)
         

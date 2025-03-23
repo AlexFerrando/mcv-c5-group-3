@@ -27,10 +27,9 @@ def train(model: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoad
     wandb.init(
         entity="arnalytics-universitat-aut-noma-de-barcelona",
         project=config.get('project', 'C5-W3'),
-        name=f"WORDS_BASELINE_RESNET34_NO_TEACHER{wandb.util.generate_id()}",
+        name=f"WORDS_LSTM1layer_RESNET34_NO_TEACHER{wandb.util.generate_id()}",
         config=config,
         reinit=True,
-        mode="offline" # Disable wandb logging for now
         mode="offline" # Disable wandb logging for now
     )
     
@@ -249,7 +248,7 @@ if __name__ == '__main__':
 
     config = {
         'resize': (224, 224),
-        'lstm_layers': 2,
+        'lstm_layers': 1,
         'dropout': 0.5,
         'learning_rate': 1e-4,
         'batch_size': 32,
@@ -260,10 +259,10 @@ if __name__ == '__main__':
         'project': 'C5-W3',
         'gradient_max_norm': 5.0,
         'use_grad_clipping': True,
-        'model_name': 'baseline.pth',
+        'model_name': 'lstm1layer_word_noteacher.pth',
         'resnet_model': 'microsoft/resnet-34',
         'use_teacher_forcing': False,
-        'detach_loop': False,
+        'detach_loop': True,
         'tokenizer': 'words'  # Use 'chars', 'words', or 'bert'
     }
 
@@ -276,7 +275,7 @@ if __name__ == '__main__':
         v2.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     )
     dataset = FoodDataset(
-        data_path=consts.DATA_PATH,
+        data_path=consts.DATA_PATH_POL,
         tokenizer=tokenizer,
         transform=transform
     )   
@@ -294,7 +293,7 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
 
     # model = LSTMModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], lstm_layers=config['lstm_layers'], dropout=config['dropout'])
-    model = BaselineModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], start_idx=start_idx)
+    model = LSTMModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], start_idx=start_idx)
     
     optimizer = get_optimizer(config)
 
