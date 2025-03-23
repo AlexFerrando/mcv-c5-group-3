@@ -30,7 +30,7 @@ def train(model: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoad
         name=f"WORDS_LSTM1layer_RESNET34_NO_TEACHER{wandb.util.generate_id()}",
         config=config,
         reinit=True,
-        mode="offline" # Disable wandb logging for now
+        # mode="offline" # Disable wandb logging for now
     )
     
     # Log model architecture
@@ -275,7 +275,7 @@ if __name__ == '__main__':
         v2.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     )
     dataset = FoodDataset(
-        data_path=consts.DATA_PATH_POL,
+        data_path=consts.DATA_PATH,
         tokenizer=tokenizer,
         transform=transform
     )   
@@ -292,8 +292,8 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
 
-    # model = LSTMModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], lstm_layers=config['lstm_layers'], dropout=config['dropout'])
-    model = LSTMModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], start_idx=start_idx)
+    model = LSTMModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], lstm_layers=config['lstm_layers'], dropout=config['dropout'], start_idx=start_idx)
+    # model = BaselineModel(tokenizer=tokenizer, resnet_model=config['resnet_model'], start_idx=start_idx)
     
     optimizer = get_optimizer(config)
 
