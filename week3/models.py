@@ -196,7 +196,7 @@ class LSTMWithAttention(nn.Module):
         self.text_max_len = text_max_len
         self.lstm_layers = lstm_layers
 
-    def forward(self, img):
+    def forward(self, img, **kwargs):
         batch_size = img.shape[0]
         # Extract visual features in the same way as the baseline.
         feat = self.resnet(img)
