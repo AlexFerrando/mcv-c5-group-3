@@ -28,7 +28,7 @@ def train(model: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoad
         wandb.init(
             entity="arnalytics-universitat-aut-noma-de-barcelona",
             project=config.get('project', 'C5-W3'),
-            name=f"testing_lr_decay_small_dataset_{wandb.util.generate_id()}",
+            name=f"optimizers_lr_and_lr_decay{wandb.util.generate_id()}",
             config=config,
             reinit=True,
             # mode="offline"  # Set mode to offline as desired.
