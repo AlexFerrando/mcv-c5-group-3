@@ -31,6 +31,7 @@ def train(model: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoad
         config=config,
         reinit=True,
         mode="offline" # Disable wandb logging for now
+        mode="offline" # Disable wandb logging for now
     )
     
     # Log model architecture
