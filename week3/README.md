@@ -1,6 +1,7 @@
 # Week 3: Image Captioning (I)
 
 ⚠️⚠️⚠️ Check our final slides [here](https://docs.google.com/presentation/d/1rZsFNczXgs0ZNEDZWPDb83qw1RwR42B14yrA6DDos6A/edit#slide=id.g340d9e9dd17_0_361)!
+📝📝📝 See the paper for the project [here](https://overleaf.cvc.uab.es/project/67dff51c85f1f209c7a4c396)
 
 Welcome to **Week 3** of our project, where we focus on **Image Captioning**. This repository contains all the necessary scripts and modules to train and evaluate captioning models for food images.
 We will train and evaluate our models in the [Food Ingredients and Recipes Dataset with Images](https://www.kaggle.com/datasets/pes12017000148/food-ingredients-and-recipe-dataset-with-images). Objective will be to be able to generate the title from a food image. An example can be found here:
