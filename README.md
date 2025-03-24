@@ -1,4 +1,4 @@
-# C5. Video Analysis - Master in Computer Vision
+# C5. Visual Recognition - Master in Computer Vision
 
 ## Week3
 
