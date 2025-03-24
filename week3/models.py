@@ -143,27 +143,30 @@ class LSTMModel(nn.Module):
         indices = torch.argmax(logits, dim=1)  # (batch, seq_len)
         return self.tokenizer.batch_decode(indices.tolist())
     
-
-
 class Attention(nn.Module):
     def __init__(self, input_dim, hidden_dim):
         super().__init__()
-        self.query = nn.Linear(input_dim, hidden_dim)
-        self.key = nn.Linear(input_dim, hidden_dim)
-        self.value = nn.Linear(input_dim, hidden_dim)
-        self.softmax = nn.Softmax(dim=-1)
+        self.query = nn.Linear(input_dim, hidden_dim)  # Queries from LSTM hidden state
+        self.key = nn.Linear(input_dim, hidden_dim)    # Keys from image features
+        self.value = nn.Linear(input_dim, hidden_dim)  # Values from image features
 
     def forward(self, query, key, value):
-        # Compute attention scores
-        q = self.query(query)  # (batch, seq_len, hidden_dim)
-        k = self.key(key)      # (batch, seq_len, hidden_dim)
-        v = self.value(value)  # (batch, seq_len, hidden_dim)
+        """
+        query: (1, batch, hidden_dim)  -> From LSTM hidden state (text)
+        key:   (1, batch, hidden_dim)  -> From image features
+        value: (1, batch, hidden_dim)  -> From image features
+        """
+        q = self.query(query)  # (1, batch, hidden_dim)
+        k = self.key(key)      # (1, batch, hidden_dim)
+        v = self.value(value)  # (1, batch, hidden_dim)
 
-        scores = torch.matmul(q, k.transpose(-2, -1)) / torch.sqrt(torch.tensor(q.size(-1), dtype=torch.float32))  # (batch, seq_len, seq_len)
-        attn_weights = self.softmax(scores)  # (batch, seq_len, seq_len)
+        # Compute attention scores for each batch independently
+        scores = torch.sum(q * k, dim=-1, keepdim=True)  # (1, batch, 1) - Scalar per batch item
 
-        context = torch.matmul(attn_weights, v)  # (batch, seq_len, hidden_dim)
-        return context, attn_weights
+        # Weight values by the attention scores
+        context = scores * v  # (1, batch, hidden_dim)
+
+        return context, scores
 
 
 class LSTMWithAttention(nn.Module):
@@ -174,7 +177,7 @@ class LSTMWithAttention(nn.Module):
             lstm_layers: int = 3,
             dropout: float = 0.0,
             resnet_model: str = 'microsoft/resnet-34',
-            attention_hidden_dim: int = 512  # Attention hidden dimension
+            attention_hidden_dim: int = 512
         ):
         super().__init__()
         self.resnet = ResNetModel.from_pretrained(resnet_model)
@@ -186,7 +189,7 @@ class LSTMWithAttention(nn.Module):
             hidden_size=512,
             num_layers=lstm_layers,
             dropout=dropout,
-            batch_first=False  # (seq_len, batch, features)
+            batch_first=False
         )
         
         self.proj = nn.Linear(512, len(tokenizer))
@@ -198,45 +201,35 @@ class LSTMWithAttention(nn.Module):
 
     def forward(self, img, **kwargs):
         batch_size = img.shape[0]
-        # Extract visual features in the same way as the baseline.
-        feat = self.resnet(img)
-        feat = feat.pooler_output.squeeze(-1).squeeze(-1).unsqueeze(0)  # (1, batch, 512)
+        feat = self.resnet(img).pooler_output.squeeze(-1).squeeze(-1).unsqueeze(0)  # (1, batch, 512)
         
-        # Apply attention mechanism to the ResNet output.
-        context, attn_weights = self.attention(feat, feat, feat)  # Attention across the ResNet features
+        start_idx = self.tokenizer.word2idx[self.tokenizer.sos_token]
+        start_embed = self.embed(torch.tensor(start_idx, device=img.device))
+        start_embeds = start_embed.repeat(batch_size, 1).unsqueeze(0)
         
-        # Initialize with SOS token embedding.
-        start_idx = self.tokenizer.char2idx[self.tokenizer.sos_token]
-        start_embed = self.embed(torch.tensor(start_idx, device=img.device))  # (512)
-        start_embeds = start_embed.repeat(batch_size, 1).unsqueeze(0)  # (1, batch, 512)
+        hidden = feat.repeat(self.lstm_layers, 1, 1)
+        cell = torch.zeros_like(hidden)
         
-        # Initialize LSTM hidden and cell states.
-        # For multi-layer LSTM, repeat the visual feature for each layer.
-        hidden = context.repeat(self.lstm_layers, 1, 1)  # (num_layers, batch, 512)
-        cell = torch.zeros_like(hidden)  # (num_layers, batch, 512)
-        
-        # Append the SOS embedding as the first output.
         outputs = [start_embeds]
-
-        # Autoregressive generation: loop for text_max_len - 1 iterations since SOS is provided.
         inp = start_embeds
+        
         for t in range(self.text_max_len - 1):
-            # Apply attention to the visual features at each step of LSTM
-            context, attn_weights = self.attention(feat, feat, feat)  # Attention across the ResNet features
             out, (hidden, cell) = self.lstm(inp, (hidden, cell))
             
-            # Optionally detach the output to cut gradient flow.
-            last_out = out[-1:]  # (1, batch, 512)
+            # Correct attention: LSTM hidden state as query, image as key/value
+            context, attn_weights = self.attention(hidden[-1:], feat, feat)
+            out = out + context  # Fuse context into LSTM output
+            
+            last_out = out[-1:]
             outputs.append(last_out)
             inp = last_out
-
-        # Concatenate outputs, permute dimensions, and apply the projection layer.
-        res = torch.cat(outputs, dim=0)  # (seq_len, batch, 512)
-        res = res.permute(1, 0, 2)  # (batch, seq_len, 512)
-        res = self.proj(res)  # (batch, seq_len, vocab_size)
-        res = res.permute(0, 2, 1)  # (batch, vocab_size, seq_len)
+        
+        res = torch.cat(outputs, dim=0)
+        res = res.permute(1, 0, 2)
+        res = self.proj(res)
+        res = res.permute(0, 2, 1)
         return res
 
     def logits_to_text(self, logits: torch.Tensor) -> list[str]:
-        indices = torch.argmax(logits, dim=1)  # (batch, seq_len)
+        indices = torch.argmax(logits, dim=1)
         return self.tokenizer.batch_decode(indices.tolist())
