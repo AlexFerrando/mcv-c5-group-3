@@ -7,7 +7,7 @@ We will train and evaluate our models in the [Food Ingredients and Recipes Datas
 
 ### 🍽️ Example:
 
-<img src="![image](https://github.com/user-attachments/assets/6d89dd84-adba-45ad-942f-8ca03efcb5ca)" alt="Example Food Image" width="400"/>
+<img src="https://assets.epicurious.com/photos/5f99a91e819b886aba0a2846/1:1/w_1920,c_limit/Chickensgiving_HERO_RECIPE_101920_1374_VOG_final.jpg" alt="Example Food Image" width="400"/>
 
 **Desired Caption:** *"Miso-Butter Roast Chicken With Acorn Squash Panzanella"*
 
