@@ -27,7 +27,7 @@ To get started with this project, follow these steps:
 ### **1. Clone the repository**
 ```bash
 git clone https://github.com/AlexFerrando/mcv-c5-group-3
-cd project-c6
+cd project-c5
 ```
 
 ### **2. Create virtual enviroment using `conda`** (Optional but recommended)
