@@ -26,7 +26,7 @@ To get started with this project, follow these steps:
 
 ### **1. Clone the repository**
 ```bash
-git clone https://github.com/AlexFerrando/project-c6.git
+git clone https://github.com/AlexFerrando/mcv-c5-group-3
 cd project-c6
 ```
 
