@@ -10,9 +10,9 @@
 [👥 Team](#-team)
 
 ## 👁️ **Project Overview**
-The project is divided into two main areas:
+The project's topic varys for each week:
 
-### **Road Traffic Monitoring**
+### **Multi Modal Recognition**
 - **Week 1:** Object Detection  
 - **Week 2:** Instance Segmentation
 - **Week 3:** Image Captioning (I)
