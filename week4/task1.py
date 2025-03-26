@@ -174,12 +174,12 @@ def pipeline(
         utils.freeze(model)
     elif experiment == 'fine-tune-encoder':
         utils.freeze(model.decoder)
-        train_loop(model, loss_fn, optimizer, train_dataloader, val_dataloader, device=device, num_epochs=num_epochs)
+        train_loop(model, loss_fn, optimizer, train_dataloader, val_dataloader, evaluator, tokenizer, device=device, num_epochs=num_epochs)
     elif experiment == 'fine-tune-decoder':
         utils.freeze(model.encoder)
-        train_loop(model, loss_fn, optimizer, train_dataloader, val_dataloader, device=device, num_epochs=num_epochs)
+        train_loop(model, loss_fn, optimizer, train_dataloader, val_dataloader, evaluator, tokenizer, device=device, num_epochs=num_epochs)
     elif experiment == 'fine-tune-both':
-        train_loop(model, loss_fn, optimizer, train_dataloader, val_dataloader, device=device, num_epochs=num_epochs)
+        train_loop(model, loss_fn, optimizer, train_dataloader, val_dataloader, evaluator, tokenizer, device=device, num_epochs=num_epochs)
     else:
         raise ValueError(f"Unknown experiment: {experiment}")
     
