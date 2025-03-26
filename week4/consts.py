@@ -4,4 +4,6 @@ DATA_PATH_ARNAU = '/Users/arnaubarrera/Desktop/MSc Computer Vision/C5. Visual Re
 DATA_PATH_POL = '/projects/master/c5/mcv-c5-group-3/archive/food-ingredients-and-recipe-dataset-with-images'
 DATA_PATH_URI = '/Users/Usuario/Documents/MCV/C5/week3/archive'
 
+SAVE_PATH_MODELS = '/ghome/c5mcv03/mcv-c5-group-3/week4/checkpoints'
+
 SEED = 42

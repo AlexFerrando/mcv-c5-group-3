@@ -62,7 +62,7 @@ class FoodDataset(Dataset):
             self.tokenizer.encode(
                 text,
                 add_special_tokens=True,
-                max_length=self.tokenizer.model_max_length,
+                max_length=self.tokenizer.model_max_length + 1,
                 truncation=True,
                 padding="max_length"
             )
