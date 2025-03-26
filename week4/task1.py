@@ -187,7 +187,7 @@ def pipeline(
     test_loop(evaluator, model, test_dataloader, loss_fn, tokenizer, device, is_validation=False)
     
 
-def setup_wandb(config: dict, disabled: bool = False) -> None:
+def setup_wandb(disabled: bool = False) -> None:
     # Experiment configuration
     config = {
         'batch_size': 32,
