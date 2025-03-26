@@ -84,6 +84,7 @@ def train_loop(
         num_epochs: int = 10
 ):
     model.to(device)
+    
     # Placeholders for best model
     best_val_loss = float('inf')
     best_model_state = None
@@ -98,7 +99,7 @@ def train_loop(
             optimizer.zero_grad()
 
             # Forward pass
-            logits = model_forward(model, img, text.size(1), device)
+            logits = model_forward(model, img, text, device)
             
             # Compute loss
             loss = loss_fn(logits, text[:, 1:].long())
@@ -186,25 +187,29 @@ def pipeline(
     test_loop(evaluator, model, test_dataloader, loss_fn, tokenizer, device, is_validation=False)
     
 
-def setup_wandb(disabled: bool = False) -> None:
-    wandb.login(key='89f4c571fd157f9b9bd2d73a2e6c39eb0ed38ad2')
+def setup_wandb(config: dict, disabled: bool = False) -> None:
+    # Experiment configuration
     config = {
         'batch_size': 32,
-        'experiment': 'off-shelf',
+        'experiment': 'fine-tune-both',  # 'off-shelf', 'fine-tune-encoder', 'fine-tune-decoder', 'fine-tune-both'
         'lr': 1e-5,
         'num_epochs': 10,
         'save_best_model': True
     }
+    
+    wandb.login(key='89f4c571fd157f9b9bd2d73a2e6c39eb0ed38ad2')
+
     wandb.init(
         entity="arnalytics-universitat-aut-noma-de-barcelona",
         project='C5-W4',
-        name=f"OFF_SHELF_{wandb.util.generate_id()}",
+        name=f"{config['experiment']}_{wandb.util.generate_id()}",
         config=config,
         reinit=True,
         mode='disabled' if disabled else 'online'
     )
 
 if __name__ == '__main__':
+
     # Load tokenizer, feature extractor and model
     MODEL_NAME = 'nlpconnect/vit-gpt2-image-captioning'
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
