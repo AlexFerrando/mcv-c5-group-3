@@ -31,6 +31,7 @@ def test_loop(
         test_dataloader: DataLoader,
         loss_fn: nn.Module,
         tokenizer: PreTrainedTokenizer,
+        epoch: int,
         device: torch.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
         is_validation: bool = True
 ):
@@ -64,10 +65,10 @@ def test_loop(
     metrics = evaluator.evaluate(all_ground_truth, all_predictions)
 
     stage = "validation" if is_validation else "test"
-    wandb.log({
-        f"{stage}_loss": test_loss,
-        **{f"{stage}_{k}": v for k, v in metrics.items()}
-    })
+    wandb.log(
+        {f"{stage}_loss": test_loss,
+        **{f"{stage}_{k}": v for k, v in metrics.items()}}, step=epoch+1
+    )
     print(f"\n\n{stage.capitalize()} Loss: {test_loss:.4f}")
     utils.pretty_print(metrics, stage.capitalize())
 
@@ -113,11 +114,9 @@ def train_loop(
             num_samples += img.size(0)
         
         train_loss = total_loss / num_samples if num_samples > 0 else 0.0
-        wandb.log({"train_loss": train_loss, "epoch": epoch + 1})
-        print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {train_loss:.4f}")
         
         # Validation phase
-        val_loss = test_loop(evaluator, model, val_dataloader, loss_fn, tokenizer, device, is_validation=True)
+        val_loss = test_loop(evaluator, model, val_dataloader, loss_fn, tokenizer, epoch, device, is_validation=True)
         
         # Save best model
         if val_loss < best_val_loss:
@@ -125,6 +124,9 @@ def train_loop(
             best_epoch = epoch  
             best_model_state = model.state_dict() 
             print('BEST EPOCH SO FAR!')
+
+        wandb.log({"train_loss": train_loss, "epoch": epoch + 1}, step=epoch+1)
+        print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {train_loss:.4f}")
 
     # Upload model to wandb
     if wandb.config['save_best_model'] and best_model_state is not None:
@@ -175,6 +177,7 @@ def pipeline(
     else:
         raise ValueError(f"Unknown experiment: {experiment}")
     
+    # Final test evaluation
     test_loop(evaluator, model, test_dataloader, loss_fn, tokenizer, device, is_validation=False)
     
 
