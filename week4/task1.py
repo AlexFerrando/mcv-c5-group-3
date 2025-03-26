@@ -92,6 +92,7 @@ def train_loop(
     # Placeholders for best model
     best_val_loss = float('inf')
     best_model_state = None
+    best_epoch = -1
     
     for epoch in range(num_epochs):
         model.train()
@@ -123,44 +124,33 @@ def train_loop(
         # Save best model
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            best_model_state = model.state_dict()
+            best_epoch = epoch  
+            best_model_state = model.state_dict() 
+            print('BEST EPOCH SO FAR!')
 
-        model.load_state_dict(best_model_state)  # Load best model
+    # Upload model to wandb
+    if wandb.config['save_best_model'] and best_model_state is not None:
+        
+        # Load and save locally
+        model_path = 'best_model.pth'
+        model.load_state_dict(best_model_state)
+        torch.save(best_model_state, model_path)
+        
+        # Create artifact
+        artifact = wandb.Artifact(
+            name="best_model",
+            type="model",
+            metadata={
+                'loss': best_val_loss,
+                'epoch': best_epoch,
+                'architecture': model.__class__.__name__
+            }
+        )
+        artifact.add_file(model_path)
+        wandb.log_artifact(artifact)
+        
+        os.remove(model_path)
 
-        # If 'save_best_model' = True in wandb.config
-        if wandb.config['save_best_model']:
-            try:
-                # Delete old versions of the model
-                api = wandb.Api()
-                artifact_name = f"{wandb.run.entity}/{wandb.run.project}/best_model:latest"
-                previous_versions = api.artifact_versions(artifact_name)
-                for old_artifact in previous_versions:
-                    old_artifact.delete()
-
-                # Create temporal file locally to store the model
-                model_path = 'best_model.pth'
-                torch.save(model.state_dict(), model_path)
-
-                # Create a new artifact and upload the new best version
-                artifact = wandb.Artifact(
-                    name='best_model', 
-                    type='model',
-                    description='Best performing model in this run',
-                    metadata={
-                        'loss': best_val_loss,
-                        'epoch': epoch,
-                        'architecture': model.__class__.__name__
-                    }
-                )
-                artifact.add_file(model_path)
-                wandb.log_artifact(artifact)
-
-                # Clean up the temporary file
-                os.remove(model_path)
-                print("Best model saved and old versions deleted successfully.")
-                
-            except Exception as e:
-                print(f"An error occurred while saving the model: {str(e)}")
 
 def pipeline(
         experiment: str,
@@ -193,7 +183,7 @@ def pipeline(
 def setup_wandb(disabled: bool = False) -> None:
     # Experiment configuration
     config = {
-        'batch_size': 10,
+        'batch_size': 5,
         'experiment': 'fine-tune-encoder',  # 'off-shelf', 'fine-tune-encoder', 'fine-tune-decoder', 'fine-tune-both'
         'lr': 1e-5,
         'num_epochs': 10,
@@ -211,6 +201,7 @@ def setup_wandb(disabled: bool = False) -> None:
         mode='disabled' if disabled else 'online'
     )
 
+
 if __name__ == '__main__':
 
     # Load tokenizer, feature extractor and model
@@ -224,40 +215,21 @@ if __name__ == '__main__':
 
     # Define dataset and create dataloaders
     dataset = FoodDataset(
-        consts.DATA_PATH_ARNAU,
+        consts.DATA_PATH,
         tokenizer,
         feature_extractor,
         #transform=podem passar-li un augmentador d'imatges
     )
-    # # Split in train, validation and test
-    # train_size, val_size, test_size = utils.get_split_sizes(len(dataset), 0.8, 0.1, 0.1)
-    # train_dataset, val_dataset, test_dataset = random_split(
-    #     dataset, [train_size, val_size, test_size],
-    #     generator=torch.Generator().manual_seed(consts.SEED)
-    # )
-
-    #### TO DELETE ####
-    # Primero crea un subset general pequeño
-    subset_size = 12  # 10 train + 1 val + 1 test
-    remaining = len(dataset) - subset_size
-    small_dataset, _ = random_split(
-        dataset, 
-        [subset_size, remaining],
+    # Split in train, validation and test
+    train_size, val_size, test_size = utils.get_split_sizes(len(dataset), 0.8, 0.1, 0.1)
+    train_dataset, val_dataset, test_dataset = random_split(
+        dataset, [train_size, val_size, test_size],
         generator=torch.Generator().manual_seed(consts.SEED)
     )
 
-    # Luego divide el subset pequeño
-    subset_train, subset_val, subset_test = random_split(
-        small_dataset,
-        [10, 1, 1],  # Ahora sí suman 12 (size del small_dataset)
-        generator=torch.Generator().manual_seed(consts.SEED)
-    )
-    #### TO DELETE ####
-
-    train_dataloader = DataLoader(subset_train, batch_size=wandb.config['batch_size'], shuffle=True)
-    #train_dataloader = DataLoader(train_dataset, batch_size=wandb.config['batch_size'], shuffle=True)
-    val_dataloader = DataLoader(subset_test, batch_size=wandb.config['batch_size'], shuffle=False)
-    test_dataloader = DataLoader(subset_val, batch_size=wandb.config['batch_size'], shuffle=False)
+    train_dataloader = DataLoader(train_dataset, batch_size=wandb.config['batch_size'], shuffle=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=wandb.config['batch_size'], shuffle=False)
+    test_dataloader = DataLoader(test_dataset, batch_size=wandb.config['batch_size'], shuffle=False)
 
 
     # Evaluate on test set
