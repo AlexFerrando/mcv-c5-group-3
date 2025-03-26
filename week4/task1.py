@@ -190,8 +190,8 @@ def pipeline(
 def setup_wandb(disabled: bool = False) -> None:
     # Experiment configuration
     config = {
-        'batch_size': 32,
-        'experiment': 'fine-tune-both',  # 'off-shelf', 'fine-tune-encoder', 'fine-tune-decoder', 'fine-tune-both'
+        'batch_size': 10,
+        'experiment': 'fine-tune-encoder',  # 'off-shelf', 'fine-tune-encoder', 'fine-tune-decoder', 'fine-tune-both'
         'lr': 1e-5,
         'num_epochs': 10,
         'save_best_model': True
@@ -232,7 +232,20 @@ if __name__ == '__main__':
         dataset, [train_size, val_size, test_size],
         generator=torch.Generator().manual_seed(consts.SEED)
     )
-    train_dataloader = DataLoader(train_dataset, batch_size=wandb.config['batch_size'], shuffle=True)
+
+    # TO DELETE
+    # Create a subset of the training dataset to try the code
+    subset_percentage = 0.1  
+    subset_size = int(len(train_dataset) * subset_percentage)
+    subset_train, _ = random_split(
+        train_dataset, 
+        [subset_size, len(train_dataset) - subset_size],
+        generator=torch.Generator().manual_seed(consts.SEED)
+    )
+    # TO DELETE
+
+    train_dataloader = DataLoader(subset_train, batch_size=wandb.config['batch_size'], shuffle=True)
+    #train_dataloader = DataLoader(train_dataset, batch_size=wandb.config['batch_size'], shuffle=True)
     val_dataloader = DataLoader(val_dataset, batch_size=wandb.config['batch_size'], shuffle=False)
     test_dataloader = DataLoader(test_dataset, batch_size=wandb.config['batch_size'], shuffle=False)
 
