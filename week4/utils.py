@@ -17,7 +17,7 @@ def pretty_print(metrics: Dict[str, Any], stage: str):
         metrics (dict): Dictionary containing metric names and their values.
         stage (str): The stage name (e.g., "Test", "Validation").
     """
-    print(f"\n{'='*20} {stage} Metrics {'='*20}")
+    print(f"{'='*20} {stage} Metrics {'='*20}")
     for key, value in metrics.items():
         print(f"{key}: {value:.4f}" if isinstance(value, float) else f"{key}: {value}")
     print("="*(50 + len(stage)))

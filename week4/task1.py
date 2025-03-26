@@ -68,7 +68,7 @@ def test_loop(
         f"{stage}_loss": test_loss,
         **{f"{stage}_{k}": v for k, v in metrics.items()}
     })
-    print(f"{stage.capitalize()} Loss: {test_loss:.4f}")
+    print(f"\n\n{stage.capitalize()} Loss: {test_loss:.4f}")
     utils.pretty_print(metrics, stage.capitalize())
 
 
@@ -212,7 +212,7 @@ if __name__ == '__main__':
     model = VisionEncoderDecoderModel.from_pretrained(MODEL_NAME)
 
     # Setup wandb
-    setup_wandb(disabled=True)
+    setup_wandb(disabled=False)
 
     # Define dataset and create dataloaders
     dataset = FoodDataset(
