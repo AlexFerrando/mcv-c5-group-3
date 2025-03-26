@@ -55,9 +55,7 @@ def test_loop(
             # Generate predictions instead of using argmax
             out = model.generate(img, **GENERATION_KWARGS)
             predictions = tokenizer.batch_decode(out, skip_special_tokens=True)
-            print(predictions)
             ground_truth = tokenizer.batch_decode(text.long(), skip_special_tokens=True)
-            print(ground_truth) 
 
             all_predictions.extend(predictions)
             all_ground_truth.extend(ground_truth)
