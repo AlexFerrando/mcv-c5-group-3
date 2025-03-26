@@ -238,7 +238,7 @@ if __name__ == '__main__':
     optimizer = optim.AdamW(model.parameters(), lr=wandb.config['lr'])
 
     pipeline(
-        'off-shelf',
+        wandb.config['experiment'],
         model,
         loss_fn,
         optimizer,
