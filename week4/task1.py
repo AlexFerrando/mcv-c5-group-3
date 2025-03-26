@@ -1,6 +1,7 @@
 from transformers import VisionEncoderDecoderModel, AutoTokenizer, ViTImageProcessor
 from dataset import FoodDataset
 from evaluator import Evaluator
+from tqdm import tqdm
 
 from torch.utils.data import DataLoader, random_split
 from torch import nn, optim
@@ -26,7 +27,7 @@ def evaluate_on_test(
     all_predictions = []
     all_ground_truth = []
     with torch.no_grad():
-        for img, text in test_dataloader:
+        for img, text in tqdm(test_dataloader, desc='Testing'):
             out = model.generate(img.to(device), **GENERATION_KWARGS)
             predictions = tokenizer.batch_decode(out, skip_special_tokens=True)
             ground_truth = tokenizer.batch_decode(text.to(torch.long), skip_special_tokens=True)
