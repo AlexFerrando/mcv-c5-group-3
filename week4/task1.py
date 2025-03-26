@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
     # Evaluate on test set
     evaluator = Evaluator()
-    loss_fn = nn.CrossEntropyLoss()
+    loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer.all_special_ids)
     optimizer = optim.Adam(model.parameters(), lr=1e-5)
 
     pipeline(
