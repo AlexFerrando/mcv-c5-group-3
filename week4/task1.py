@@ -55,7 +55,9 @@ def test_loop(
             # Generate predictions instead of using argmax
             out = model.generate(img, **GENERATION_KWARGS)
             predictions = tokenizer.batch_decode(out, skip_special_tokens=True)
+            print(predictions)
             ground_truth = tokenizer.batch_decode(text.long(), skip_special_tokens=True)
+            print(ground_truth) 
 
             all_predictions.extend(predictions)
             all_ground_truth.extend(ground_truth)
@@ -70,6 +72,8 @@ def test_loop(
     })
     print(f"\n\n{stage.capitalize()} Loss: {test_loss:.4f}")
     utils.pretty_print(metrics, stage.capitalize())
+
+    return test_loss
 
 
 def train_loop(
@@ -114,8 +118,7 @@ def train_loop(
         print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {train_loss:.4f}")
         
         # Validation phase
-        val_metrics = test_loop(evaluator, model, val_dataloader, loss_fn, tokenizer, device, is_validation=True)
-        val_loss = val_metrics.get("val_loss", float('inf'))
+        val_loss = test_loop(evaluator, model, val_dataloader, loss_fn, tokenizer, device, is_validation=True)
         
         # Save best model
         if val_loss < best_val_loss:
@@ -221,33 +224,40 @@ if __name__ == '__main__':
 
     # Define dataset and create dataloaders
     dataset = FoodDataset(
-        consts.DATA_PATH,
+        consts.DATA_PATH_ARNAU,
         tokenizer,
         feature_extractor,
         #transform=podem passar-li un augmentador d'imatges
     )
-    # Split in train, validation and test
-    train_size, val_size, test_size = utils.get_split_sizes(len(dataset), 0.8, 0.1, 0.1)
-    train_dataset, val_dataset, test_dataset = random_split(
-        dataset, [train_size, val_size, test_size],
+    # # Split in train, validation and test
+    # train_size, val_size, test_size = utils.get_split_sizes(len(dataset), 0.8, 0.1, 0.1)
+    # train_dataset, val_dataset, test_dataset = random_split(
+    #     dataset, [train_size, val_size, test_size],
+    #     generator=torch.Generator().manual_seed(consts.SEED)
+    # )
+
+    #### TO DELETE ####
+    # Primero crea un subset general pequeño
+    subset_size = 12  # 10 train + 1 val + 1 test
+    remaining = len(dataset) - subset_size
+    small_dataset, _ = random_split(
+        dataset, 
+        [subset_size, remaining],
         generator=torch.Generator().manual_seed(consts.SEED)
     )
 
-    # TO DELETE
-    # Create a subset of the training dataset to try the code
-    subset_percentage = 0.1  
-    subset_size = int(len(train_dataset) * subset_percentage)
-    subset_train, _ = random_split(
-        train_dataset, 
-        [subset_size, len(train_dataset) - subset_size],
+    # Luego divide el subset pequeño
+    subset_train, subset_val, subset_test = random_split(
+        small_dataset,
+        [10, 1, 1],  # Ahora sí suman 12 (size del small_dataset)
         generator=torch.Generator().manual_seed(consts.SEED)
     )
-    # TO DELETE
+    #### TO DELETE ####
 
     train_dataloader = DataLoader(subset_train, batch_size=wandb.config['batch_size'], shuffle=True)
     #train_dataloader = DataLoader(train_dataset, batch_size=wandb.config['batch_size'], shuffle=True)
-    val_dataloader = DataLoader(val_dataset, batch_size=wandb.config['batch_size'], shuffle=False)
-    test_dataloader = DataLoader(test_dataset, batch_size=wandb.config['batch_size'], shuffle=False)
+    val_dataloader = DataLoader(subset_test, batch_size=wandb.config['batch_size'], shuffle=False)
+    test_dataloader = DataLoader(subset_val, batch_size=wandb.config['batch_size'], shuffle=False)
 
 
     # Evaluate on test set
