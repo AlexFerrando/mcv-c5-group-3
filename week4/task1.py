@@ -138,7 +138,7 @@ def train_loop(
         
         # Create artifact
         artifact = wandb.Artifact(
-            name="best_model",
+            name=wandb.config['experiment'],
             type="model",
             metadata={
                 'loss': best_val_loss,
@@ -178,7 +178,7 @@ def pipeline(
         raise ValueError(f"Unknown experiment: {experiment}")
     
     # Final test evaluation
-    test_loop(evaluator, model, test_dataloader, loss_fn, tokenizer, device, is_validation=False)
+    test_loop(evaluator, model, test_dataloader, loss_fn, tokenizer, num_epochs-1, device, is_validation=False)
     
 
 def setup_wandb(disabled: bool = False) -> None:
