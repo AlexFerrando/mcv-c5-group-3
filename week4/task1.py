@@ -10,7 +10,7 @@ import torch
 import wandb
 import utils
 import os
-
+import numpy as np
 
 # Check parameters here: https://huggingface.co/docs/transformers/main_classes/text_generation
 GENERATION_KWARGS = {
@@ -31,6 +31,7 @@ def test_loop(
         test_dataloader: DataLoader,
         loss_fn: nn.Module,
         tokenizer: PreTrainedTokenizer,
+        epoch: int,
         device: torch.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
         is_validation: bool = True
 ):
@@ -64,10 +65,10 @@ def test_loop(
     metrics = evaluator.evaluate(all_ground_truth, all_predictions)
 
     stage = "validation" if is_validation else "test"
-    wandb.log({
-        f"{stage}_loss": test_loss,
-        **{f"{stage}_{k}": v for k, v in metrics.items()}
-    })
+    wandb.log(
+        {f"{stage}_loss": test_loss,
+        **{f"{stage}_{k}": v for k, v in metrics.items()}}, step=epoch+1
+    )
     print(f"\n\n{stage.capitalize()} Loss: {test_loss:.4f}")
     utils.pretty_print(metrics, stage.capitalize())
 
@@ -113,11 +114,9 @@ def train_loop(
             num_samples += img.size(0)
         
         train_loss = total_loss / num_samples if num_samples > 0 else 0.0
-        wandb.log({"train_loss": train_loss, "epoch": epoch + 1})
-        print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {train_loss:.4f}")
         
         # Validation phase
-        val_loss = test_loop(evaluator, model, val_dataloader, loss_fn, tokenizer, device, is_validation=True)
+        val_loss = test_loop(evaluator, model, val_dataloader, loss_fn, tokenizer, epoch, device, is_validation=True)
         
         # Save best model
         if val_loss < best_val_loss:
@@ -125,6 +124,9 @@ def train_loop(
             best_epoch = epoch  
             best_model_state = model.state_dict() 
             print('BEST EPOCH SO FAR!')
+
+        wandb.log({"train_loss": train_loss, "epoch": epoch + 1}, step=epoch+1)
+        print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {train_loss:.4f}")
 
     # Upload model to wandb
     if wandb.config['save_best_model'] and best_model_state is not None:
@@ -136,7 +138,7 @@ def train_loop(
         
         # Create artifact
         artifact = wandb.Artifact(
-            name="best_model",
+            name=wandb.config['experiment'],
             type="model",
             metadata={
                 'loss': best_val_loss,
@@ -162,6 +164,7 @@ def pipeline(
         device: torch.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
         num_epochs: int = 10
 ):  
+    utils.unfreeze(model)
     if experiment == 'off-shelf':
         utils.freeze(model)
     elif experiment == 'fine-tune-encoder':
@@ -175,7 +178,8 @@ def pipeline(
     else:
         raise ValueError(f"Unknown experiment: {experiment}")
     
-    test_loop(evaluator, model, test_dataloader, loss_fn, tokenizer, device, is_validation=False)
+    # Final test evaluation
+    test_loop(evaluator, model, test_dataloader, loss_fn, tokenizer, num_epochs-1, device, is_validation=False)
     
 
 def setup_wandb(disabled: bool = False) -> None:
@@ -183,7 +187,7 @@ def setup_wandb(disabled: bool = False) -> None:
     config = {
         'batch_size': 5,
         'experiment': 'fine-tune-encoder',  # 'off-shelf', 'fine-tune-encoder', 'fine-tune-decoder', 'fine-tune-both'
-        'lr': 1e-5,
+        'lr': 5e-4,
         'num_epochs': 10,
         'save_best_model': True
     }
@@ -233,7 +237,21 @@ if __name__ == '__main__':
     # Evaluate on test set
     evaluator = Evaluator()
     loss_fn = nn.CrossEntropyLoss(ignore_index=model.config.decoder.pad_token_id)
-    optimizer = optim.AdamW(model.parameters(), lr=wandb.config['lr'])
+    def get_layerwise_lr_params(model, base_lr, lr_scale=1000.0):
+        # Get all modules in forward order
+        layers = list(model.named_parameters())
+        num_layers = len(layers)
+        
+        # Exponential scaling: from base_lr / lr_scale to base_lr
+        lrs = np.logspace(-np.log10(lr_scale), 0, num=num_layers) * base_lr
+
+        param_groups = []
+        for (name, param), lr in zip(layers, lrs):
+            param_groups.append({'params': [param], 'lr': lr})
+        return param_groups
+
+    optimizer = optim.AdamW(get_layerwise_lr_params(model, base_lr=wandb.config['lr'], lr_scale=1000.0))
+    # optimizer = optim.AdamW(model.parameters(), lr=wandb.config['lr'])
 
     pipeline(
         wandb.config['experiment'],

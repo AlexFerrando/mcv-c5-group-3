@@ -26,3 +26,7 @@ def pretty_print(metrics: Dict[str, Any], stage: str):
 def freeze(module: torch.nn.Module):
     for param in module.parameters():
         param.requires_grad = False
+
+def unfreeze(module: torch.nn.Module):
+    for param in module.parameters():
+        param.requires_grad = True
