@@ -1,6 +1,9 @@
 from collections import OrderedDict
 import os
 
+# Set environment variable for CUDA memory fragmentation management
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -31,11 +34,11 @@ CONFIG = {
     'llama_model': 'meta-llama/Llama-3.2-1B',  # or meta-llama/Llama-3.2-3B
     'encoder_decoder_model': 'nlpconnect/vit-gpt2-image-captioning',
     'vit_encoder_path': None,  # Optionally, provide a local path to load a ViT encoder
-    'batch_size': 4,
+    'batch_size': 1,
     'lr': 1e-4,
     'num_epochs': 5,
-    'lora_r': 16,
-    'lora_alpha': 32,
+    'lora_r': 4,
+    'lora_alpha': 8,
     'lora_dropout': 0.05,
     'lora_target_modules': ["q_proj", "k_proj", "v_proj", "o_proj"],
     'max_seq_length': 128,
@@ -49,7 +52,7 @@ CONFIG = {
 # Helper Functions
 # -----------------------------------------------------------------------------
 def setup_wandb(config):
-    wandb.init(project="C5-W4-PEFT", config=config, reinit=True, mode='disabled')
+    wandb.init(project="C5-W4-PEFT", config=config, reinit=True)
     print("Wandb initialized.")
 
 def load_models(config, device):
@@ -112,14 +115,18 @@ def collate_fn(batch):
 
 def train_epoch(model, dataloader, optimizer, device):
     model.train()
+    scaler = torch.amp.GradScaler(device=device)
     total_loss = 0.0
     for images, labels in tqdm(dataloader, desc="Training"):
         images, labels = images.to(device), labels.to(device)
         optimizer.zero_grad()
-        outputs = model(pixel_values=images, labels=labels, return_dict=True)
-        loss = outputs.loss
-        loss.backward()
-        optimizer.step()
+        # Use mixed precision for forward pass
+        with torch.amp.autocast(device_type="cuda"):
+            outputs = model(pixel_values=images, labels=labels, return_dict=True)
+            loss = outputs.loss
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
         total_loss += loss.item() * images.size(0)
     return total_loss / len(dataloader.dataset)
 
@@ -131,26 +138,24 @@ def validate_epoch(model, dataloader, device, evaluator, tokenizer, generation_k
     with torch.no_grad():
         for images, labels in tqdm(dataloader, desc=f"Evaluating ({data_split})"):
             images, labels = images.to(device), labels.to(device)
-            outputs = model(pixel_values=images, labels=labels, return_dict=True)
-            loss = outputs.loss
+            # Forward pass in mixed precision for loss computation
+            with torch.amp.autocast(device_type="cuda"):
+                outputs = model(pixel_values=images, labels=labels, return_dict=True)
+                loss = outputs.loss
             total_loss += loss.item() * images.size(0)
             
-            # Generate predictions
-            preds = model.generate(pixel_values=images, **generation_kwargs)
+            # Generate predictions under mixed precision
+            with torch.amp.autocast(device_type="cuda"):
+                preds = model.generate(pixel_values=images, **generation_kwargs)
             
-            # Decode predictions and ground truth
             preds_decoded = tokenizer.batch_decode(preds, skip_special_tokens=True)
             gt_decoded = tokenizer.batch_decode(labels, skip_special_tokens=True)
-            
             all_predictions.extend(preds_decoded)
             all_ground_truth.extend(gt_decoded)
     
     avg_loss = total_loss / len(dataloader.dataset)
-    
-    # Compute evaluation metrics comparing predictions with ground truth
     metrics = evaluator.evaluate(all_ground_truth, all_predictions)
     print(f"{data_split.capitalize()} Metrics:", metrics)
-    
     return avg_loss, metrics
 
 # -----------------------------------------------------------------------------
@@ -163,7 +168,7 @@ def main():
     model, tokenizer, feature_extractor = load_models(CONFIG, device)
     transform = get_transforms()
 
-    # Prepare dataset and split (80/20 train/validation split)
+    # Prepare dataset and split (80/10/10 for train/validation/test)
     dataset = FoodDataset(data_path=CONFIG['data_path'], tokenizer=tokenizer, feature_extractor=feature_extractor, transform=transform)
     train_size, val_size, test_size = utils.get_split_sizes(len(dataset), 0.8, 0.1, 0.1)
     train_dataset, val_dataset, test_dataset = random_split(
