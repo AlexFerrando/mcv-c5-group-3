@@ -95,6 +95,8 @@ def load_models(config, device):
     model.config.pad_token_id = tokenizer.eos_token_id
     model.config.eos_token_id = tokenizer.eos_token_id
     
+    tokenizer.pad_token = tokenizer.eos_token
+    
     model.to(device)
     return model, tokenizer, feature_extractor
 
@@ -162,8 +164,7 @@ def main():
     transform = get_transforms()
 
     # Prepare dataset and split (80/20 train/validation split)
-    dataset = FoodDataset(CONFIG['data_path'], tokenizer, feature_extractor, CONFIG['max_seq_length'],
-                          transform=transform)
+    dataset = FoodDataset(data_path=CONFIG['data_path'], tokenizer=tokenizer, feature_extractor=feature_extractor, transform=transform)
     train_size, val_size, test_size = utils.get_split_sizes(len(dataset), 0.8, 0.1, 0.1)
     train_dataset, val_dataset, test_dataset = random_split(
         dataset, [train_size, val_size, test_size],
