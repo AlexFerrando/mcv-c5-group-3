@@ -108,7 +108,7 @@ def get_transforms():
 
 def collate_fn(batch):
     images, labels = zip(*batch)
-    return torch.stack(images), torch.stack(labels)
+    return torch.stack(images), torch.stack(labels).long()
 
 def train_epoch(model, dataloader, optimizer, device):
     model.train()
