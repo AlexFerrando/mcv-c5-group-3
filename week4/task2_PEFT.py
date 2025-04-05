@@ -34,10 +34,10 @@ CONFIG = {
     'encoder_decoder_model': 'nlpconnect/vit-gpt2-image-captioning',
     'vit_encoder_path': None,  # Optionally, provide a local path to load a ViT encoder
     'batch_size': 4,
-    'lr': 1e-4,
+    'lr': 1e-3,
     'num_epochs': 10,
-    'lora_r': 16,
-    'lora_alpha': 32,
+    'lora_r': 32,
+    'lora_alpha': 64,
     'lora_dropout': 0.05,
     'lora_target_modules': ["q_proj", "k_proj", "v_proj", "o_proj"],
     'max_seq_length': 128,
@@ -104,9 +104,11 @@ def load_models(config, device):
     tokenizer = AutoTokenizer.from_pretrained(config['llama_model'])
     tokenizer.model_max_length = config['max_seq_length']
     tokenizer.pad_token = '<|finetune_right_pad_id|>'
+    tokenizer.padding_side = 'right'
     tokenizer.pad_token_id = tokenizer.added_tokens_encoder[tokenizer.pad_token]
     model.config.pad_token = tokenizer.pad_token
     model.config.pad_token_id = tokenizer.pad_token_id
+    model.config.decoder_start_token_id = tokenizer.bos_token_id
     
     model.to(device)
     return model, tokenizer, feature_extractor
@@ -134,7 +136,7 @@ def train_epoch(model, dataloader, optimizer, device):
         total_loss += loss.item() * images.size(0)
     return total_loss / len(dataloader.dataset)
 
-def validate_epoch(model, dataloader, device, evaluator, tokenizer, generation_kwargs, data_split="validation"):
+def validate_epoch(model, dataloader, device, evaluator, tokenizer, generation_kwargs, data_split="validation", eval_metrics=True):
     model.eval()
     total_loss = 0.0
     all_predictions = []
@@ -146,21 +148,22 @@ def validate_epoch(model, dataloader, device, evaluator, tokenizer, generation_k
             loss = outputs.loss
             total_loss += loss.item() * images.size(0)
             
-            # Generate predictions
-            preds = model.generate(pixel_values=images, **generation_kwargs)
-            
-            # Decode predictions and ground truth
-            preds_decoded = tokenizer.batch_decode(preds, skip_special_tokens=True)
-            gt_decoded = tokenizer.batch_decode(labels, skip_special_tokens=True)
-            
-            all_predictions.extend(preds_decoded)
-            all_ground_truth.extend(gt_decoded)
+            if eval_metrics:
+                # Generate predictions only if evaluation metrics are desired
+                preds = model.generate(pixel_values=images, **generation_kwargs)
+                preds_decoded = tokenizer.batch_decode(preds, skip_special_tokens=True)
+                gt_decoded = tokenizer.batch_decode(labels, skip_special_tokens=True)
+                
+                all_predictions.extend(preds_decoded)
+                all_ground_truth.extend(gt_decoded)
     
     avg_loss = total_loss / len(dataloader.dataset)
     
-    # Compute evaluation metrics comparing predictions with ground truth
-    metrics = evaluator.evaluate(all_ground_truth, all_predictions)
-    print(f"{data_split.capitalize()} Metrics:", metrics)
+    if eval_metrics:
+        metrics = evaluator.evaluate(all_ground_truth, all_predictions)
+        print(f"{data_split.capitalize()} Metrics:", metrics)
+    else:
+        metrics = {}
     
     return avg_loss, metrics
 
@@ -224,43 +227,71 @@ def main():
         print("Evaluating...")
         val_loss, val_metrics = validate_epoch(
             model, val_dataloader, device, evaluator, tokenizer,
-            CONFIG['generation_kwargs'], data_split="validation"
+            CONFIG['generation_kwargs'], data_split="validation", eval_metrics=False
         )
-        wandb.log({
-            "epoch": epoch,
-            "train_loss": train_loss,
-            "val_loss": val_loss,
-            **{f"val_{k}": v for k, v in val_metrics.items()}
-        })
-        print(f"Epoch {epoch}: Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Metrics: {val_metrics}")
 
         # Save the best model and evaluate on the training set if it improves
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             model.decoder.save_pretrained(best_model_path)
             print(f"New best model saved at epoch {epoch+1} with Val Loss: {val_loss:.4f}")
-            # Evaluate on the training set using the evaluator
-            train_eval_loss, train_eval_metrics = validate_epoch(
-                model, train_dataloader, device, evaluator, tokenizer,
-                CONFIG['generation_kwargs'], data_split="train"
-            )
-            wandb.log({
-                "epoch": epoch,
-                "train_evaluator_loss": train_eval_loss,
-                **{f"train_{k}": v for k, v in train_eval_metrics.items()}
-            })
-            
+
+        wandb.log({
+            "epoch": epoch+1,
+            "train_loss": train_loss,
+            "val_loss": val_loss,
+        }, commit=True)
+        print(f"Epoch {epoch+1}: Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Metrics: {val_metrics}")
+
+    # --- Final Evaluation using Best Adapters ---
+    print(f"\nLoading best adapters from {best_model_path} for final evaluation...")
+    # Wrap adapter loading in try-except block
+    try:
+        model.decoder.load_adapter(best_model_path, adapter_name="default", is_trainable=False)
+
+        print("Successfully loaded best adapters.")
+        model.eval() # Set to evaluation mode
+    except Exception as e:
+        print(f"Error loading best adapters: {e}. Evaluating with the final model state instead.")
+        print("Proceeding with evaluation using the model's final state from training.")
+        model.eval() # Ensure model is in eval mode even if loading failed
+
+    print("\n--- Final Evaluation Run ---")
+
+    # Evaluate on Test Set
+    print("Evaluating on Test Set (with metrics)...")
     test_loss, test_metrics = validate_epoch(
         model, test_dataloader, device, evaluator, tokenizer,
-        CONFIG['generation_kwargs'], data_split="test"
+        CONFIG['generation_kwargs'], data_split="test", eval_metrics=True
     )
-    wandb.log({
-        "test_loss": test_loss,
-        **{f"test_{k}": v for k, v in test_metrics.items()}
-    })
-    print(f"Test Loss: {test_loss:.4f}, Metrics: {test_metrics}")
+    wandb.log({"final_test_loss": test_loss, **{f"final_test_{k}": v for k, v in test_metrics.items()}}, commit=False)
+    print(f"Final Test Loss: {test_loss:.4f}")
+    print(f"Final Test Metrics: {test_metrics}")
 
-    print("Training complete.")
+    # Evaluate on Validation Set
+    print("\nEvaluating on Validation Set (with metrics)...")
+    final_val_loss, final_val_metrics = validate_epoch(
+        model, val_dataloader, device, evaluator, tokenizer,
+        CONFIG['generation_kwargs'], data_split="validation", eval_metrics=True
+    )
+    wandb.log({"final_val_loss": final_val_loss, **{f"final_val_{k}": v for k, v in final_val_metrics.items()}}, commit=False)
+    print(f"Final Validation Loss: {final_val_loss:.4f}")
+    print(f"Final Validation Metrics: {final_val_metrics}")
+
+
+    # Evaluate on Training Set
+    print("\nEvaluating on Training Set (with metrics)...")
+    # Note: Evaluating metrics on the full training set can be time-consuming
+    final_train_loss, final_train_metrics = validate_epoch(
+        model, train_dataloader, device, evaluator, tokenizer,
+        CONFIG['generation_kwargs'], data_split="train", eval_metrics=True
+    )
+    wandb.log({"final_train_loss": final_train_loss, **{f"final_train_{k}": v for k, v in final_train_metrics.items()}}, commit=True)
+    print(f"Final Train Loss: {final_train_loss:.4f}")
+    print(f"Final Train Metrics: {final_train_metrics}")
+
+
+    print("\n--- Evaluation Complete ---")
     wandb.finish()
 
 if __name__ == '__main__':
