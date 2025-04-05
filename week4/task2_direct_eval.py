@@ -29,24 +29,34 @@ def evaluate_blip2(model, dataloader, processor, evaluator, device, stage="test"
         for images, titles in tqdm(dataloader, desc=f"Evaluating [{stage}]"):
             images = images.to(device)
 
-            # prompts = ["Describe the food."] * len(images)
-            inputs = processor(images=list(images), return_tensors="pt", padding=True).to(device)
+            # Define the prompt and create a list (one per image in the batch)
+            prompt = "A photo of delicious food showing"
+            prompts = [prompt] * len(images)
+            
+            # Pass both images and prompts to the processor
+            inputs = processor(images=list(images), text=prompts, return_tensors="pt", padding=True).to(device)
             outputs = model.generate(**inputs, **GENERATION_KWARGS)
             predictions = processor.batch_decode(outputs, skip_special_tokens=True)
 
-            all_predictions.extend(predictions)
-            all_ground_truth.extend([t for t in titles])
+            # Filter out the prompt from each prediction
+            filtered_predictions = []
+            for pred in predictions:
+                if pred.startswith(prompt):
+                    filtered_predictions.append(pred[len(prompt):].strip().capitalize())
+                else:
+                    filtered_predictions.append(pred)
+
+            all_predictions.extend(filtered_predictions)
+            all_ground_truth.extend(titles)
             
-            # Logging some images for easy qualitative analyisis
+            # Logging some images for qualitative analysis
             if not logged:
                 images_to_log = []
-                print("images shape", images.shape)
-                for img, pred, gt in zip(images, predictions, titles):
-                    print("single image shape", img.shape)
+                for img, pred, gt in zip(images, filtered_predictions, titles):
                     if isinstance(img, torch.Tensor):
+                        # If the image is in CHW and RGB, convert it to PIL format
                         if img.ndim == 3 and img.shape[-1] == 3:
                             img = img.permute(2, 0, 1)
-                        print("single image cpu", img.cpu().shape)
                         img = T.ToPILImage()(img.cpu())
                     images_to_log.append(wandb.Image(img, caption=f"GT: {gt}\nPred: {pred}"))
                 wandb.log({f"{stage}_samples": images_to_log})
