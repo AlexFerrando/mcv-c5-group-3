@@ -28,7 +28,7 @@ We continue to work on the [Food Ingredients and Recipes Dataset with Images](ht
 ├── consts.py                 # Constants and configuration settings
 ├── dataset.py                # Dataset class for main training/evaluation
 ├── dataset_task_2.py         # Dataset class for direct evaluation (BLIP2)
-├── download_model.py         # Script to download pre-trained models
+├── download_model.py         # Script to download fine-tuned models
 ├── evaluator.py              # Evaluation metrics and scoring
 ├── plots.ipynb               # Notebook for plotting metrics/visualizations
 ├── qualitative_eval.py       # Script for qualitative evaluation
