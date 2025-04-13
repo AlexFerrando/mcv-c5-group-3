@@ -55,6 +55,7 @@ def run_experiment(pipe: DiffusionPipeline, experiment: str, user: str, device: 
     """
     experiment_to_func = {
         'ddim_vs_ddpm': experiments.run_ddim_vs_ddpm_experiment,
+        'num_denoising_steps': experiments.run_experiment_num_denoising_steps,
     }
     if experiment not in experiment_to_func:
         raise ValueError(f"Experiment {experiment} not found in available experiments.")

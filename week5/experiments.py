@@ -52,5 +52,37 @@ def run_ddim_vs_ddpm_experiment(pipe: DiffusionPipeline, user: str, device: str)
             filename = f"{output_dir}/{i:02d}_{scheduler_name}.png"
             image.save(filename)
             print(f"Saved: {filename}")
-            
+
+    print(f"Experiment completed. Images saved in {output_dir}.")
+
+
+def run_experiment_num_denoising_steps(pipe: DiffusionPipeline, user: str, device: str):
+    """
+    Run the experiment with different denoising steps using the loaded diffusion pipeline.
+    Args:
+        pipe (DiffusionPipeline): The loaded diffusion pipeline.
+        user (str): The user for path management.
+        device (str): The device to use for inference.
+    """
+    # Read prompts
+    prompts = read_prompts(user, '10_prompts.txt')
+
+    # Define output directory
+    output_dir = f"outputs/num_denoising_steps"
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Define denoising steps
+    denoising_steps = [1, 5, 10, 20] # TO BE DEFINED
+
+    for steps in denoising_steps:
+        pipe.scheduler.set_timesteps(steps)
+        pipe.to(device)
+
+        for i, prompt in enumerate(prompts):
+            image = pipe(prompt=prompt).images[0]
+
+            filename = f"{output_dir}/{i:02d}_{steps}_steps.png"
+            image.save(filename)
+            print(f"Saved: {filename}")
+
     print(f"Experiment completed. Images saved in {output_dir}.")
