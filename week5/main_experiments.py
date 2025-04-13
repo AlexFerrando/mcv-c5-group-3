@@ -8,7 +8,7 @@ def getargs():
     parser = argparse.ArgumentParser(description="Run Stable Diffusion")
     parser.add_argument(
         '--experiment', '-e', type=str, required=True, help='Experiment to run',
-        choices=['ddim'], default='ddim',
+        choices=['ddim_vs_ddpm'],
     )
     parser.add_argument(
         '--model', '-m', type=str, help='Model to use for inference',
@@ -54,7 +54,7 @@ def run_experiment(pipe: DiffusionPipeline, experiment: str, user: str, device: 
         experiment (str): The name of the experiment to run.
     """
     experiment_to_func = {
-        'ddim': experiments.run_ddim_vs_ddpm_experiment,
+        'ddim_vs_ddpm': experiments.run_ddim_vs_ddpm_experiment,
     }
     if experiment not in experiment_to_func:
         raise ValueError(f"Experiment {experiment} not found in available experiments.")
