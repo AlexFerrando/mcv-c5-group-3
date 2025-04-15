@@ -8,7 +8,7 @@ def getargs():
     parser = argparse.ArgumentParser(description="Run Stable Diffusion")
     parser.add_argument(
         '--experiment', '-e', type=str, required=True, help='Experiment to run',
-        choices=['ddim_vs_ddpm'],
+        choices=['ddim_vs_ddpm', 'num_denoising_steps', 'target_resolution'],
     )
     parser.add_argument(
         '--model', '-m', type=str, help='Model to use for inference',
@@ -48,7 +48,7 @@ def load_pipeline(model: str, seed: int = 42, device: str = 'cuda') -> Diffusion
         raise ValueError(f"Model {model} not found in available models.")
     
     generator = torch.Generator(device=device).manual_seed(seed)
-    
+
     return DiffusionPipeline.from_pretrained(model_to_pipe[model], generator=generator).to(device)
 
 
