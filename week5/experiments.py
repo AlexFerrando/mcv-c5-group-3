@@ -1,5 +1,8 @@
 import consts
-from diffusers import DiffusionPipeline
+import torch
+import os
+from diffusers import DDIMScheduler, DDPMScheduler, DiffusionPipeline
+from PIL import Image
 
 def read_prompts(user: str, filename: str) -> list[str]:
     """
@@ -14,12 +17,6 @@ def read_prompts(user: str, filename: str) -> list[str]:
     with open(f"{prompts_path}/{filename}", 'r') as file:
         prompts = file.readlines()
     return [prompt.strip() for prompt in prompts]
-
-
-import torch
-import os
-from diffusers import DDIMScheduler, DDPMScheduler, DiffusionPipeline
-from PIL import Image
 
 def run_ddim_vs_ddpm_experiment(pipe: DiffusionPipeline, user: str, device: str):
     """
@@ -84,5 +81,39 @@ def run_experiment_num_denoising_steps(pipe: DiffusionPipeline, user: str, devic
             filename = f"{output_dir}/{i:02d}_{steps}_steps.png"
             image.save(filename)
             print(f"Saved: {filename}")
+
+    print(f"Experiment completed. Images saved in {output_dir}.")
+    
+
+def run_experiment_target_resolution(pipe: DiffusionPipeline, user: str, device: str):
+    """
+    Run the experiment generating images at a fixed target resolution using the loaded diffusion pipeline.
+    Args:
+        pipe (DiffusionPipeline): The loaded diffusion pipeline.
+        user (str): The user for path management.
+        device (str): The device to use for inference.
+    """
+    # Read prompts
+    prompts = read_prompts(user, '10_prompts.txt')
+
+    # Get model name for output directory
+    model_name = pipe.config._name_or_path.split("/")[-1].replace(" ", "_")
+
+    # Define output directory
+    output_dir = f"outputs/model_comparison/{model_name}"
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Set resolution
+    width = 274
+    height = 169
+
+    pipe.to(device)
+
+    for i, prompt in enumerate(prompts):
+        image = pipe(prompt=prompt, width=width, height=height).images[0]
+
+        filename = f"{output_dir}/{i:02d}_{width}x{height}.png"
+        image.save(filename)
+        print(f"Saved: {filename}")
 
     print(f"Experiment completed. Images saved in {output_dir}.")
