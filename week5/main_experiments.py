@@ -8,14 +8,11 @@ def getargs():
     parser = argparse.ArgumentParser(description="Run Stable Diffusion")
     parser.add_argument(
         '--experiment', '-e', type=str, required=True, help='Experiment to run',
-        choices=['ddim_vs_ddpm', 'num_denoising_steps', 'target_resolution'],
+        choices=['ddim_vs_ddpm', 'num_denoising_steps', 'target_resolution', 'negative_prompting', 'cfg_strength'],
     )
     parser.add_argument(
         '--model', '-m', type=str, help='Model to use for inference',
         choices=['2.1', '2.1_turbo', 'xl', 'xl_turbo'], default='xl',
-    )
-    parser.add_argument(
-        '--seed', '-s', type=int, default=42, help='Random seed for reproducibility'
     )
     parser.add_argument(
         '--user', '-u', type=str, default='server', help='User for path management',
@@ -47,9 +44,7 @@ def load_pipeline(model: str, seed: int = 42, device: str = 'cuda') -> Diffusion
     if model not in model_to_pipe:
         raise ValueError(f"Model {model} not found in available models.")
     
-    generator = torch.Generator(device=device).manual_seed(seed)
-
-    return DiffusionPipeline.from_pretrained(model_to_pipe[model], generator=generator).to(device)
+    return DiffusionPipeline.from_pretrained(model_to_pipe[model]).to(device)
 
 
 def run_experiment(pipe: DiffusionPipeline, experiment: str, user: str, device: str):
@@ -63,6 +58,8 @@ def run_experiment(pipe: DiffusionPipeline, experiment: str, user: str, device: 
         'ddim_vs_ddpm': experiments.run_ddim_vs_ddpm_experiment,
         'num_denoising_steps': experiments.run_experiment_num_denoising_steps,
         'target_resolution': experiments.run_experiment_target_resolution,
+        'negative_prompting': experiments.run_negative_prompt_experiment,
+        'cfg_strength': experiments.run_cfg_strength_experiment,
     }
 
     if experiment not in experiment_to_func:
@@ -75,5 +72,5 @@ if __name__ == "__main__":
     args = getargs()
 
     # Load the pipeline
-    pipe = load_pipeline(args.model, args.seed, args.device)
+    pipe = load_pipeline(args.model, args.device)
     run_experiment(pipe, args.experiment, args.user, args.device)
