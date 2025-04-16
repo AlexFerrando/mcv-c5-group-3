@@ -12,7 +12,7 @@ def getargs():
     )
     parser.add_argument(
         '--model', '-m', type=str, help='Model to use for inference',
-        choices=['2.1', '2.1_turbo', 'xl', 'xl_turbo'], default='xl',
+        choices=['2.1', '2.1_turbo', 'xl', 'xl_turbo', '3.5_m'], default='xl',
     )
     parser.add_argument(
         '--user', '-u', type=str, default='server', help='User for path management',
@@ -38,7 +38,8 @@ def load_pipeline(model: str, seed: int = 42, device: str = 'cuda') -> Diffusion
         '2.1': "stabilityai/stable-diffusion-2-1",
         '2.1_turbo': "stabilityai/sd-turbo",
         'xl': "stabilityai/stable-diffusion-xl-base-1.0",
-        'xl_turbo': "stabilityai/sdxl-turbo"
+        'xl_turbo': "stabilityai/sdxl-turbo",
+        '3.5_m': "stabilityai/stable-diffusion-3.5-medium"
     }
 
     if model not in model_to_pipe:
