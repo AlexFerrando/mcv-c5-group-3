@@ -13,7 +13,8 @@ from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
     ViTConfig,
-    BitsAndBytesConfig
+    BitsAndBytesConfig,
+    get_linear_schedule_with_warmup
 )
 from peft import LoraConfig, get_peft_model, TaskType
 from dataset import FoodDataset
@@ -33,17 +34,19 @@ CONFIG = {
     'llama_model': 'meta-llama/Llama-3.2-3B',  # or meta-llama/Llama-3.2-3B
     'encoder_decoder_model': 'nlpconnect/vit-gpt2-image-captioning',
     'vit_encoder_path': None,  # Optionally, provide a local path to load a ViT encoder
-    'batch_size': 4,
-    'lr': 1e-3,
-    'num_epochs': 10,
-    'lora_r': 32,
-    'lora_alpha': 64,
-    'lora_dropout': 0.05,
-    'lora_target_modules': ["q_proj", "k_proj", "v_proj", "o_proj"],
+    'batch_size': 8,
+    'lr': 0.0001,
+    'num_epochs': 1,
+    'lora_r': 4,
+    'lora_alpha': 4,
+    'lora_target_modules': ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "down_proj", "up_proj", "lm_head"],
+    'lora_dropout': 0.1,
+    'weight_decay': 0.01,
+    # 'lora_target_modules': []
     'max_seq_length': 128,
     'save_best_model': True,
     'experiment': 'peft_lora_finetune',
-    'generation_kwargs': {'max_new_tokens': 50, 'num_beams': 3},
+    'generation_kwargs': {'max_new_tokens': 50},    
     'data_path': consts.DATA_PATH,
 }
 
@@ -80,8 +83,10 @@ def load_models(config, device):
     # Load Llama decoder and apply PEFT (LoRA)
     decoder = AutoModelForCausalLM.from_pretrained(
         config['llama_model'],
+        torch_dtype=torch.float16,
         # quantization_config=quantization_config
     )
+    print(decoder)
     decoder.config.is_decoder = True
     
     peft_config = LoraConfig(
@@ -93,9 +98,14 @@ def load_models(config, device):
         bias="none"
     )
     decoder = get_peft_model(decoder, peft_config)
+    print("decoder trainabla parameters after PEFT")
+    decoder.print_trainable_parameters()
     
     # Create the VisionEncoderDecoderModel
     model = VisionEncoderDecoderModel(encoder=vit_encoder, decoder=decoder)
+    print()
+    print("Model loaded with PEFT (LoRA) applied.")
+    print(model.decoder)
 
     # Freeze encoder parameters
     for param in model.encoder.parameters():
@@ -110,6 +120,10 @@ def load_models(config, device):
     model.config.pad_token_id = tokenizer.pad_token_id
     model.config.decoder_start_token_id = tokenizer.bos_token_id
     
+    CONFIG['generation_kwargs']['eos_token_id'] = tokenizer.eos_token_id
+    CONFIG['generation_kwargs']['pad_token_id'] = tokenizer.pad_token_id
+    CONFIG['generation_kwargs']['bos_token_id'] = tokenizer.bos_token_id
+    
     model.to(device)
     return model, tokenizer, feature_extractor
 
@@ -123,7 +137,7 @@ def collate_fn(batch):
     images, labels = zip(*batch)
     return torch.stack(images), torch.stack(labels).long()
 
-def train_epoch(model, dataloader, optimizer, device):
+def train_epoch(model, dataloader, optimizer, scheduler, device):
     model.train()
     total_loss = 0.0
     for images, labels in tqdm(dataloader, desc="Training", mininterval=60):
@@ -133,6 +147,7 @@ def train_epoch(model, dataloader, optimizer, device):
         loss = outputs.loss
         loss.backward()
         optimizer.step()
+        scheduler.step()
         total_loss += loss.item() * images.size(0)
     return total_loss / len(dataloader.dataset)
 
@@ -160,6 +175,9 @@ def validate_epoch(model, dataloader, device, evaluator, tokenizer, generation_k
     avg_loss = total_loss / len(dataloader.dataset)
     
     if eval_metrics:
+        print(f"5 Evaluation Samples ({data_split}):")
+        print(all_ground_truth[:5])
+        print(all_predictions[:5])
         metrics = evaluator.evaluate(all_ground_truth, all_predictions)
         print(f"{data_split.capitalize()} Metrics:", metrics)
     else:
@@ -173,6 +191,55 @@ def parse_args():
     parser.add_argument("--experiment_name", type=str, help="Custom experiment name for logging/tracking", default=None)
     parser.add_argument("--llama_model", type=str, help="HuggingFace model ID for the LLaMA decoder", default=None)
     return parser.parse_args()
+
+
+
+# --- NEW HELPER FUNCTION FOR FINAL EVALUATIONS ---
+def run_final_evaluations(model, tokenizer, evaluator, dataloaders, generation_kwargs, device, log_prefix="final"):
+    """Runs evaluation with metrics on test, validation, and train sets."""
+    print(f"\n--- Running Final Evaluations ({log_prefix}) ---")
+
+    results = {}
+
+    # Evaluate on Test Set
+    print(f"\nEvaluating on Test Set ({log_prefix})...")
+    test_loss, test_metrics = validate_epoch(
+        model, dataloaders['test'], device, evaluator, tokenizer,
+        generation_kwargs, data_split="test", eval_metrics=True
+    )
+    results['test_loss'] = test_loss
+    results['test_metrics'] = test_metrics
+    wandb.log({f"{log_prefix}_test_loss": test_loss, **{f"{log_prefix}_test_{k}": v for k, v in test_metrics.items()}})
+    print(f"{log_prefix.capitalize()} Test Loss: {test_loss:.4f}")
+    print(f"{log_prefix.capitalize()} Test Metrics: {test_metrics}")
+
+    # Evaluate on Validation Set
+    print(f"\nEvaluating on Validation Set ({log_prefix})...")
+    val_loss, val_metrics = validate_epoch(
+        model, dataloaders['val'], device, evaluator, tokenizer,
+        generation_kwargs, data_split="validation", eval_metrics=True
+    )
+    results['val_loss'] = val_loss
+    results['val_metrics'] = val_metrics
+    wandb.log({f"{log_prefix}_validation_loss": val_loss, **{f"{log_prefix}_val_{k}": v for k, v in val_metrics.items()}})
+    print(f"{log_prefix.capitalize()} Validation Loss: {val_loss:.4f}")
+    print(f"{log_prefix.capitalize()} Validation Metrics: {val_metrics}")
+
+    # Evaluate on Training Set
+    print(f"\nEvaluating on Training Set ({log_prefix})...")
+    # Note: Evaluating metrics on the full training set can be time-consuming
+    train_loss, train_metrics = validate_epoch(
+        model, dataloaders['train'], device, evaluator, tokenizer,
+        generation_kwargs, data_split="train", eval_metrics=True
+    )
+    results['train_loss'] = train_loss
+    results['train_metrics'] = train_metrics
+    wandb.log({f"{log_prefix}_train_loss": train_loss, **{f"{log_prefix}_train_{k}": v for k, v in train_metrics.items()}})
+    print(f"{log_prefix.capitalize()} Train Loss: {train_loss:.4f}")
+    print(f"{log_prefix.capitalize()} Train Metrics: {train_metrics}")
+
+    return results
+
 
 
 # -----------------------------------------------------------------------------
@@ -213,17 +280,24 @@ def main():
                                 shuffle=False, collate_fn=collate_fn)
     test_dataloader = DataLoader(test_dataset, batch_size=wandb.config['batch_size'],
                                  shuffle=False, collate_fn=collate_fn)
+    optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=CONFIG['lr'], weight_decay=CONFIG.get('weight_decay', 0.001))
+    # Calculate total training steps and warmup steps
+    total_steps = len(train_dataloader) * CONFIG['num_epochs']
+    warmup_steps = int(0.25 * total_steps)  # using 25% of total steps as warmup
 
-    optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=CONFIG['lr'])
+    # Setup scheduler with linear schedule and warmup
+    scheduler = get_linear_schedule_with_warmup(
+        optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps
+    )
     
     best_val_loss = float('inf')
-    best_model_path = f"/ghome/c5mcv03/mcv-c5-group-3/archive/artifacts/decoder_{CONFIG['llama_model']}_encoder_{CONFIG['vit_encoder_path']}_best_model"
+    best_model_path = f"/ghome/c5mcv03/mcv-c5-group-3/archive/artifacts/{CONFIG['llama_model'].split('/')[-1]}_best_model_few_epochs"
     evaluator = Evaluator()
 
     for epoch in range(CONFIG['num_epochs']):
         print(f"Epoch {epoch+1}/{CONFIG['num_epochs']}")
         print("Training...")
-        train_loss = train_epoch(model, train_dataloader, optimizer, device)
+        train_loss = train_epoch(model, train_dataloader, optimizer, scheduler=scheduler, device=device)
         print("Evaluating...")
         val_loss, val_metrics = validate_epoch(
             model, val_dataloader, device, evaluator, tokenizer,
@@ -235,64 +309,56 @@ def main():
             best_val_loss = val_loss
             model.decoder.save_pretrained(best_model_path)
             print(f"New best model saved at epoch {epoch+1} with Val Loss: {val_loss:.4f}")
-
+        current_lr = scheduler.get_last_lr()[0]
         wandb.log({
+            "lr": current_lr,
             "epoch": epoch+1,
             "train_loss": train_loss,
-            "val_loss": val_loss,
+            "validation_loss": val_loss,
         }, commit=True)
         print(f"Epoch {epoch+1}: Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Metrics: {val_metrics}")
 
+    
+    model.decoder.save_pretrained(best_model_path.replace("best_model", "final_model"))
     # --- Final Evaluation using Best Adapters ---
     print(f"\nLoading best adapters from {best_model_path} for final evaluation...")
     # Wrap adapter loading in try-except block
+    
+    # 1. Evaluate the final model state (after last epoch)
+    dataloaders = {'train': train_dataloader, 'val': val_dataloader, 'test': test_dataloader}
+    print("\n--- Evaluating Model at Final Training State ---")
+    run_final_evaluations(
+        model=model,
+        tokenizer=tokenizer,
+        evaluator=evaluator,
+        dataloaders=dataloaders,
+        generation_kwargs=CONFIG['generation_kwargs'],
+        device=device,
+        log_prefix="final_training" # Prefix for wandb logs
+    )
+
+    # 2. Load best adapters and evaluate again
+    print(f"\n--- Loading Best Adapters from {best_model_path} ---")
     try:
+        # Load the saved adapter weights into the existing PeftModel decoder
         model.decoder.load_adapter(best_model_path, adapter_name="default", is_trainable=False)
-
         print("Successfully loaded best adapters.")
-        model.eval() # Set to evaluation mode
+        model.eval() # Ensure model is in eval mode
+
+        print("\n--- Evaluating Model with Best Adapters ---")
+        run_final_evaluations(
+            model=model,
+            tokenizer=tokenizer,
+            evaluator=evaluator,
+            dataloaders=dataloaders,
+            generation_kwargs=CONFIG['generation_kwargs'],
+            device=device,
+            log_prefix="best_model" # Different prefix for wandb logs
+        )
+
     except Exception as e:
-        print(f"Error loading best adapters: {e}. Evaluating with the final model state instead.")
-        print("Proceeding with evaluation using the model's final state from training.")
-        model.eval() # Ensure model is in eval mode even if loading failed
-
-    print("\n--- Final Evaluation Run ---")
-
-    # Evaluate on Test Set
-    print("Evaluating on Test Set (with metrics)...")
-    test_loss, test_metrics = validate_epoch(
-        model, test_dataloader, device, evaluator, tokenizer,
-        CONFIG['generation_kwargs'], data_split="test", eval_metrics=True
-    )
-    wandb.log({"final_test_loss": test_loss, **{f"final_test_{k}": v for k, v in test_metrics.items()}}, commit=False)
-    print(f"Final Test Loss: {test_loss:.4f}")
-    print(f"Final Test Metrics: {test_metrics}")
-
-    # Evaluate on Validation Set
-    print("\nEvaluating on Validation Set (with metrics)...")
-    final_val_loss, final_val_metrics = validate_epoch(
-        model, val_dataloader, device, evaluator, tokenizer,
-        CONFIG['generation_kwargs'], data_split="validation", eval_metrics=True
-    )
-    wandb.log({"final_val_loss": final_val_loss, **{f"final_val_{k}": v for k, v in final_val_metrics.items()}}, commit=False)
-    print(f"Final Validation Loss: {final_val_loss:.4f}")
-    print(f"Final Validation Metrics: {final_val_metrics}")
-
-
-    # Evaluate on Training Set
-    print("\nEvaluating on Training Set (with metrics)...")
-    # Note: Evaluating metrics on the full training set can be time-consuming
-    final_train_loss, final_train_metrics = validate_epoch(
-        model, train_dataloader, device, evaluator, tokenizer,
-        CONFIG['generation_kwargs'], data_split="train", eval_metrics=True
-    )
-    wandb.log({"final_train_loss": final_train_loss, **{f"final_train_{k}": v for k, v in final_train_metrics.items()}}, commit=True)
-    print(f"Final Train Loss: {final_train_loss:.4f}")
-    print(f"Final Train Metrics: {final_train_metrics}")
-
-
-    print("\n--- Evaluation Complete ---")
-    wandb.finish()
+        print(f"Error loading best adapters: {e}. Skipping evaluation with best adapters.")
+        wandb.finish()
 
 if __name__ == '__main__':
     main()
