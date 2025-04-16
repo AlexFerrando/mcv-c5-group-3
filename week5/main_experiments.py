@@ -8,7 +8,7 @@ def getargs():
     parser = argparse.ArgumentParser(description="Run Stable Diffusion")
     parser.add_argument(
         '--experiment', '-e', type=str, required=True, help='Experiment to run',
-        choices=['ddim_vs_ddpm', 'num_denoising_steps', 'target_resolution', 'negative_prompting', 'cfg_strength'],
+        choices=['ddim_vs_ddpm', 'num_denoising_steps', 'negative_prompting', 'cfg_strength', 'model_comparison'],
     )
     parser.add_argument(
         '--model', '-m', type=str, help='Model to use for inference',
@@ -57,7 +57,7 @@ def run_experiment(pipe: DiffusionPipeline, experiment: str, user: str, device: 
     experiment_to_func = {
         'ddim_vs_ddpm': experiments.run_ddim_vs_ddpm_experiment,
         'num_denoising_steps': experiments.run_experiment_num_denoising_steps,
-        'target_resolution': experiments.run_experiment_target_resolution,
+        'model_comparison': experiments.run_model_comparison,
         'negative_prompting': experiments.run_negative_prompt_experiment,
         'cfg_strength': experiments.run_cfg_strength_experiment,
     }
