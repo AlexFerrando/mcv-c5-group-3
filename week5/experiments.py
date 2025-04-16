@@ -212,7 +212,55 @@ def run_cfg_strength_experiment(pipe: DiffusionPipeline, user: str, device: str)
 
     print(f"CFG strength experiment completed. Results saved in {output_dir}.")
 
-def run_experiment_target_resolution(pipe: DiffusionPipeline, user: str, device: str):
+
+def run_model_comparison(pipe: DiffusionPipeline, user: str, device: str):
+    """
+    Run the experiment generating high-quality realistic food images using the loaded diffusion pipeline.
+    Args:
+        pipe (DiffusionPipeline): The loaded diffusion pipeline.
+        user (str): The user for path management.
+        device (str): The device to use for inference.
+    """
+    # Read prompts
+    prompts = read_prompts(user, '10_prompts.txt')
+
+    # Get model name for output directory
+    model_name = pipe.config._name_or_path.split("/")[-1].replace(" ", "_")
+
+    # Define output directory
+    output_dir = f"outputs/model_comparison/{model_name}"
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Standard aspect ratios: 512x512, 768x512, or 1024x768 typically work well
+    width = 512
+    height = 512
+
+    pipe.to(device)
+
+    # Adjustable parameters for quality
+    num_inference_steps = 50  
+
+    for i, prompt in enumerate(prompts):
+        
+        # Set seed for reproducibility (comment out for random results each time)
+        generator = torch.Generator(device=device).manual_seed(42)
+        
+        image = pipe(
+            prompt=prompt,
+            width=width,
+            height=height,
+            num_inference_steps=num_inference_steps,
+            generator=generator
+        ).images[0]
+
+        filename = f"{output_dir}/{i:02d}_.png"
+        image.save(filename)
+        print(f"Saved image: {filename}")
+
+    print(f"Experiment completed. Images saved in {output_dir}.")
+
+
+def run_experiment_food(pipe: DiffusionPipeline, user: str, device: str):
     """
     Run the experiment generating high-quality realistic food images using the loaded diffusion pipeline.
     Args:
