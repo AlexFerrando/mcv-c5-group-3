@@ -165,7 +165,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     dataframe = load_data(CSV_FILE_PATH, INTERMEDIATE_CSV_PATH, ANNOTATION_COLUMN_NAME)
-    if args.annotate_drinks:
+    if args.annotate_only_drinks:
         if 'Classification' not in dataframe.columns:
             raise KeyError("`Classification` column not found in your CSV.")
         # case‑insensitive match
