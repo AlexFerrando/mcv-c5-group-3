@@ -1,8 +1,8 @@
-# C5. Visual Recognition - Master in Computer Vision
-
-## Week 5: Difusion Models (I)
+# Week 5: Difusion Models (I)
 
 ⚠️⚠️⚠️ Check our final slides [here](https://docs.google.com/presentation/d/1MlQPRpjzPVIdy00WUVDrs9ibqbTohHMr6xRDkt-_1o4/edit?usp=sharing)!
+
+📝📝📝 See the project paper [here](https://overleaf.cvc.uab.cat/read/tbtthcmqxmft#83be8e)!
 
 Welcome to **Week 5** of our project on  **Difustion Models**! Building on last week's image-captioning work we have worked on: 
 
@@ -126,15 +126,4 @@ Then you’re ready to run training, evaluation, and testing scripts!
 
 ---
 
-
-
-## 💡 **Updates**
-This repository will be updated weekly throughout the duration of the module.  
-Once the module is completed, further updates are unlikely.
-
-## 👥 **Team**
 For any questions or debugging help, reach out to the team! 🚀
-- [**Arnau Barrera**](https://github.com/arnalytics)  
-- [**Alex Ferrando**](https://github.com/AlexFerrando)  
-- [**Pol Rosinés**](https://github.com/RosinesP)  
-- [**Oriol Marín**](https://github.com/Uriiol1808)  
