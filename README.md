@@ -25,7 +25,7 @@ We continue to work on the [Food Ingredients and Recipes Dataset with Images](ht
 **Desired Caption:** *"Miso-Butter Roast Chicken With Acorn Squash Panzanella"*
 
 #### Augmented drink example
-<img src="assets/django-reinhardt-gen.png" alt="Example augmented drink" width="400"/>
+<img src="week5/assets/django-reinhardt-gen.png" alt="Example augmented drink" width="400"/>
 
 **Caption:** *"Django Reinhardt"*
 
