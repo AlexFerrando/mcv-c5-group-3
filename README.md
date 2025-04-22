@@ -6,8 +6,6 @@
 
 Welcome to **Week 5** of our project on  **Difustion Models**! Building on last week's image-captioning work we have worked on: 
 
-leveraging **Usage of different Stable diffusion models**, **Exploration of parametrization/options with inference of diffusion models**, **analyze a problem of the model and set a goal/research question** and **train/finetune an image captioning model from last week**. Building upon last week models, this week we explore:
-
 - **Compare** multiple Stable Diffusion variants (2.1, XL Base, XL Turbo and 3.5 Medium)
 - **Calibrate** [XL Base](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) (via Hugging Face) by varying denoising steps, sampler (DDPM vs DDIM), CFG scale and negative prompting.
 - **Problem analysis** of the model and dataset. Identifying “drinks” as a minority class and relabeling them both automatically and manually
