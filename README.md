@@ -1,8 +1,12 @@
 # C5. Visual Recognition - Master in Computer Vision
 
+## Final presentation: 
+
+⚠️⚠️⚠️ Check the slides for the final presentation [here](https://docs.google.com/presentation/d/1hR9FyqTa52-xNWuvfwtI0YZzdH_38c1HcM-IcfHnx3g/edit?usp=sharing)!
+
 ## Week 5: Difusion Models (I)
 
-⚠️⚠️⚠️ Check our final slides [here](https://docs.google.com/presentation/d/1MlQPRpjzPVIdy00WUVDrs9ibqbTohHMr6xRDkt-_1o4/edit?usp=sharing)!
+Check our slides for difusion models [here](https://docs.google.com/presentation/d/1MlQPRpjzPVIdy00WUVDrs9ibqbTohHMr6xRDkt-_1o4/edit?usp=sharing)!
 
 Welcome to **Week 5** of our project on  **Difustion Models**! Building on last week's image-captioning work we have worked on: 
 
